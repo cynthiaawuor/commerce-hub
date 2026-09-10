@@ -1,0 +1,37 @@
+model Supplier {
+    id           String   @id @default(uuid())
+    name         String
+    email        String   @unique
+    paymentTerms String
+    status       String   @default("ACTIVE")
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime
+
+    catalog     SupplierCatalog[]
+    performance SupplierPerformance[]
+}
+
+model SupplierCatalog {
+    id           String   @id @default(uuid())
+    supplierId   String
+    productId    String // Soft relation to Inventory Service
+    unitCost     Float
+    leadTimeDays Int
+    createdAt    DateTime @default(now())
+
+    supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+    @@unique([supplierId, productId])
+}
+
+model SupplierPerformance {
+    id              String   @id @default(uuid())
+    supplierId      String
+    purchaseOrderId String
+    qtyOrdered      Int
+    qtyReceived     Int
+    daysLate        Int      @default(0)
+    createdAt       DateTime @default(now())
+
+    supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+}
