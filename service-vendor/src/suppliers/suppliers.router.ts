@@ -16,8 +16,7 @@ suppliersRouter.get("/", async (_req: Request, res: Response) => {
 
 suppliersRouter.get("/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
-  const supplier = await getSupplier(`${id}`);
-  res.status(supplier ? 200 : 404).json(supplier);
+  res.status(200).json(await getSupplier(`${id}`));
 });
 
 suppliersRouter.post("/", async (req: Request, res: Response) => {
@@ -29,20 +28,16 @@ suppliersRouter.post("/", async (req: Request, res: Response) => {
 
 suppliersRouter.put("/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
-  const createdSupplier = await updateSupplier(`${id}`, req.body);
+  const updatedSupplier = await updateSupplier(`${id}`, req.body);
   res
-    .status(202)
-    .json({ message: "Supplier updated successfully", data: createdSupplier });
+    .status(200)
+    .json({ message: "Supplier updated successfully", data: updatedSupplier });
 });
 
 suppliersRouter.delete("/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
-  const deleted = await deleteSupplier(`${id}`);
-  res.json({
-    message: deleted
-      ? `Supplier with ID ${id} deleted successfully`
-      : "Failed to delete supplier",
-  });
+  await deleteSupplier(`${id}`);
+  res.json({ message: `Supplier with ID ${id} deleted successfully` });
 });
 
 export default suppliersRouter;

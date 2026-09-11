@@ -7,7 +7,7 @@ export default async function parseAndValidate<T extends object>(
   cls: ClassConstructor<T>,
   obj: any,
 ): Promise<{ obj: T | null; errors: ErrorEntries | null }> {
-  const dto = plainToInstance(cls, obj);
+  const dto = plainToInstance(cls, obj ?? {});
 
   const errors = await validate(dto);
 

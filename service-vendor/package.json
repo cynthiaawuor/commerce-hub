@@ -8,7 +8,10 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "contract:emit": "prisma contract emit",
-    "test": "vitest"
+    "test": "vitest",
+    "db:migrate": "prisma db migrate",
+    "db:plan": "prisma migration plan",
+    "db:push": "npm run db:plan && npm run db:migrate"
   },
   "keywords": [],
   "author": "",
