@@ -18,7 +18,7 @@ export default async function parseAndValidate<T extends object>(
   return {
     obj: null,
     errors: errors.reduce((acc, curr) => {
-      acc[curr.property] = Object.values(curr.constraints!);
+      acc[curr.property] = Object.values(curr.constraints ?? {});
 
       return acc;
     }, {} as ErrorEntries),

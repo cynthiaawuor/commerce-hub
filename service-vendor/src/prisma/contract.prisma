@@ -9,6 +9,22 @@ model Supplier {
     updatedAt    DateTime @default(now())
 
     deliveries Delivery[]
+    catalog    CatalogItem[]
+}
+
+model CatalogItem {
+    id           String   @id @default(uuid())
+    name         String
+    description  String
+    unitPrice    Float
+    unitsInStock Int
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @default(now())
+
+    supplierId String
+
+    supplier        Supplier         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+    deliveryMetrics DeliveryMetric[]
 }
 
 // ------------------------------------------------------
@@ -37,7 +53,7 @@ model Delivery {
 model DeliveryMetric {
     id String @id @default(uuid())
 
-    purchaseOrderItemId String
+    catalogItemId String
 
     // Quality Performance
     qtyOrdered  Int
@@ -49,5 +65,6 @@ model DeliveryMetric {
     // Relations
     deliveryId String
 
-    delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+    delivery    Delivery    @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+    catalogItem CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
 }
