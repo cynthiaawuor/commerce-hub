@@ -12,9 +12,7 @@
     // "types": [],
     // For nodejs:
     // "lib": ["esnext"],
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     // and npm install -D @types/node
 
     // Other Outputs
@@ -36,6 +34,7 @@
 
     // Recommended Options
     "strict": true,
+    "strictPropertyInitialization": false,
     "jsx": "react-jsx",
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
@@ -43,6 +42,9 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+
+    // class-validator / class-transformer use legacy decorators
+    "experimentalDecorators": true
   }
 }

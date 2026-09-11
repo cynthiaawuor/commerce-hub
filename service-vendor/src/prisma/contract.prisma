@@ -2,36 +2,52 @@ model Supplier {
     id           String   @id @default(uuid())
     name         String
     email        String   @unique
+    phone        String
     paymentTerms String
     status       String   @default("ACTIVE")
     createdAt    DateTime @default(now())
-    updatedAt    DateTime
+    updatedAt    DateTime @default(now())
 
-    catalog     SupplierCatalog[]
-    performance SupplierPerformance[]
+    deliveries Delivery[]
 }
 
-model SupplierCatalog {
-    id           String   @id @default(uuid())
-    supplierId   String
-    productId    String // Soft relation to Inventory Service
-    unitCost     Float
-    leadTimeDays Int
-    createdAt    DateTime @default(now())
+// ------------------------------------------------------
+// Logs every time a truck arrives
+// ------------------------------------------------------
+model Delivery {
+    id         String @id @default(uuid())
+    supplierId String
 
-    supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-
-    @@unique([supplierId, productId])
-}
-
-model SupplierPerformance {
-    id              String   @id @default(uuid())
-    supplierId      String
+    // Soft Relations to other modules
     purchaseOrderId String
-    qtyOrdered      Int
-    qtyReceived     Int
-    daysLate        Int      @default(0)
-    createdAt       DateTime @default(now())
+
+    // Time Performance
+    expectedDate DateTime
+    actualDate   DateTime
+    daysLate     Int      @default(0) // 0 if early/on-time
+
+    createdAt DateTime @default(now())
+
+    // Relations
+    metrics DeliveryMetric[]
 
     supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+}
+
+model DeliveryMetric {
+    id String @id @default(uuid())
+
+    purchaseOrderItemId String
+
+    // Quality Performance
+    qtyOrdered  Int
+    qtyReceived Int
+    qtyRejected Int @default(0) // Damaged, wrong item, unacceptable quality
+
+    createdAt DateTime @default(now())
+
+    // Relations
+    deliveryId String
+
+    delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
 }

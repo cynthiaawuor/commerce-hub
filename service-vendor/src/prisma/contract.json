@@ -4,16 +4,16 @@
   "target": "postgres",
   "profileHash": "3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2",
   "roots": {
+    "delivery": {
+      "model": "Delivery",
+      "namespace": "public"
+    },
+    "deliveryMetric": {
+      "model": "DeliveryMetric",
+      "namespace": "public"
+    },
     "supplier": {
       "model": "Supplier",
-      "namespace": "public"
-    },
-    "supplierCatalog": {
-      "model": "SupplierCatalog",
-      "namespace": "public"
-    },
-    "supplierPerformance": {
-      "model": "SupplierPerformance",
       "namespace": "public"
     }
   },
@@ -21,6 +21,215 @@
     "namespaces": {
       "public": {
         "models": {
+          "Delivery": {
+            "fields": {
+              "actualDate": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "daysLate": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "expectedDate": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "purchaseOrderId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "supplierId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "metrics": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "deliveryId"
+                  ]
+                },
+                "to": {
+                  "model": "DeliveryMetric",
+                  "namespace": "public"
+                }
+              },
+              "supplier": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "supplierId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Supplier",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "actualDate": {
+                  "column": "actualDate"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "daysLate": {
+                  "column": "daysLate"
+                },
+                "expectedDate": {
+                  "column": "expectedDate"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "purchaseOrderId": {
+                  "column": "purchaseOrderId"
+                },
+                "supplierId": {
+                  "column": "supplierId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "delivery"
+            }
+          },
+          "DeliveryMetric": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "deliveryId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "purchaseOrderItemId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "qtyOrdered": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "qtyReceived": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "qtyRejected": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "delivery": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "deliveryId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Delivery",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "deliveryId": {
+                  "column": "deliveryId"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "purchaseOrderItemId": {
+                  "column": "purchaseOrderItemId"
+                },
+                "qtyOrdered": {
+                  "column": "qtyOrdered"
+                },
+                "qtyReceived": {
+                  "column": "qtyReceived"
+                },
+                "qtyRejected": {
+                  "column": "qtyRejected"
+                }
+              },
+              "namespaceId": "public",
+              "table": "deliveryMetric"
+            }
+          },
           "Supplier": {
             "fields": {
               "createdAt": {
@@ -58,6 +267,13 @@
                   "kind": "scalar"
                 }
               },
+              "phone": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "status": {
                 "nullable": false,
                 "type": {
@@ -74,7 +290,7 @@
               }
             },
             "relations": {
-              "catalog": {
+              "deliveries": {
                 "cardinality": "1:N",
                 "on": {
                   "localFields": [
@@ -85,22 +301,7 @@
                   ]
                 },
                 "to": {
-                  "model": "SupplierCatalog",
-                  "namespace": "public"
-                }
-              },
-              "performance": {
-                "cardinality": "1:N",
-                "on": {
-                  "localFields": [
-                    "id"
-                  ],
-                  "targetFields": [
-                    "supplierId"
-                  ]
-                },
-                "to": {
-                  "model": "SupplierPerformance",
+                  "model": "Delivery",
                   "namespace": "public"
                 }
               }
@@ -122,6 +323,9 @@
                 "paymentTerms": {
                   "column": "paymentTerms"
                 },
+                "phone": {
+                  "column": "phone"
+                },
                 "status": {
                   "column": "status"
                 },
@@ -131,190 +335,6 @@
               },
               "namespaceId": "public",
               "table": "supplier"
-            }
-          },
-          "SupplierCatalog": {
-            "fields": {
-              "createdAt": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/timestamptz-temporal@1",
-                  "kind": "scalar"
-                }
-              },
-              "id": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
-                }
-              },
-              "leadTimeDays": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/int4@1",
-                  "kind": "scalar"
-                }
-              },
-              "productId": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
-                }
-              },
-              "supplierId": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
-                }
-              },
-              "unitCost": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/float8@1",
-                  "kind": "scalar"
-                }
-              }
-            },
-            "relations": {
-              "supplier": {
-                "cardinality": "N:1",
-                "on": {
-                  "localFields": [
-                    "supplierId"
-                  ],
-                  "targetFields": [
-                    "id"
-                  ]
-                },
-                "to": {
-                  "model": "Supplier",
-                  "namespace": "public"
-                }
-              }
-            },
-            "storage": {
-              "fields": {
-                "createdAt": {
-                  "column": "createdAt"
-                },
-                "id": {
-                  "column": "id"
-                },
-                "leadTimeDays": {
-                  "column": "leadTimeDays"
-                },
-                "productId": {
-                  "column": "productId"
-                },
-                "supplierId": {
-                  "column": "supplierId"
-                },
-                "unitCost": {
-                  "column": "unitCost"
-                }
-              },
-              "namespaceId": "public",
-              "table": "supplierCatalog"
-            }
-          },
-          "SupplierPerformance": {
-            "fields": {
-              "createdAt": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/timestamptz-temporal@1",
-                  "kind": "scalar"
-                }
-              },
-              "daysLate": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/int4@1",
-                  "kind": "scalar"
-                }
-              },
-              "id": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
-                }
-              },
-              "purchaseOrderId": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
-                }
-              },
-              "qtyOrdered": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/int4@1",
-                  "kind": "scalar"
-                }
-              },
-              "qtyReceived": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/int4@1",
-                  "kind": "scalar"
-                }
-              },
-              "supplierId": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
-                }
-              }
-            },
-            "relations": {
-              "supplier": {
-                "cardinality": "N:1",
-                "on": {
-                  "localFields": [
-                    "supplierId"
-                  ],
-                  "targetFields": [
-                    "id"
-                  ]
-                },
-                "to": {
-                  "model": "Supplier",
-                  "namespace": "public"
-                }
-              }
-            },
-            "storage": {
-              "fields": {
-                "createdAt": {
-                  "column": "createdAt"
-                },
-                "daysLate": {
-                  "column": "daysLate"
-                },
-                "id": {
-                  "column": "id"
-                },
-                "purchaseOrderId": {
-                  "column": "purchaseOrderId"
-                },
-                "qtyOrdered": {
-                  "column": "qtyOrdered"
-                },
-                "qtyReceived": {
-                  "column": "qtyReceived"
-                },
-                "supplierId": {
-                  "column": "supplierId"
-                }
-              },
-              "namespaceId": "public",
-              "table": "supplierPerformance"
             }
           }
         }
@@ -326,6 +346,170 @@
       "public": {
         "entries": {
           "table": {
+            "delivery": {
+              "columns": {
+                "actualDate": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "daysLate": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "expectedDate": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "purchaseOrderId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "supplierId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "supplierId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "delivery"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "supplier"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "supplierId"
+                  ],
+                  "name": "delivery_supplierId_idx_c4d9a8b9",
+                  "prefix": "delivery_supplierId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "deliveryMetric": {
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "deliveryId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "purchaseOrderItemId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "qtyOrdered": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "qtyReceived": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "qtyRejected": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "deliveryId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "deliveryMetric"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "delivery"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "deliveryId"
+                  ],
+                  "name": "deliveryMetric_deliveryId_idx_ebc950f6",
+                  "prefix": "deliveryMetric_deliveryId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "supplier": {
               "columns": {
                 "createdAt": {
@@ -357,6 +541,11 @@
                   "nativeType": "text",
                   "nullable": false
                 },
+                "phone": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
                 "status": {
                   "codecId": "pg/text@1",
                   "default": {
@@ -368,6 +557,10 @@
                 },
                 "updatedAt": {
                   "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
                   "nativeType": "timestamptz",
                   "nullable": false
                 }
@@ -386,168 +579,6 @@
                   ]
                 }
               ]
-            },
-            "supplierCatalog": {
-              "columns": {
-                "createdAt": {
-                  "codecId": "pg/timestamptz-temporal@1",
-                  "default": {
-                    "expression": "now()",
-                    "kind": "function"
-                  },
-                  "nativeType": "timestamptz",
-                  "nullable": false
-                },
-                "id": {
-                  "codecId": "pg/text@1",
-                  "nativeType": "text",
-                  "nullable": false
-                },
-                "leadTimeDays": {
-                  "codecId": "pg/int4@1",
-                  "nativeType": "int4",
-                  "nullable": false
-                },
-                "productId": {
-                  "codecId": "pg/text@1",
-                  "nativeType": "text",
-                  "nullable": false
-                },
-                "supplierId": {
-                  "codecId": "pg/text@1",
-                  "nativeType": "text",
-                  "nullable": false
-                },
-                "unitCost": {
-                  "codecId": "pg/float8@1",
-                  "nativeType": "float8",
-                  "nullable": false
-                }
-              },
-              "foreignKeys": [
-                {
-                  "onDelete": "cascade",
-                  "source": {
-                    "columns": [
-                      "supplierId"
-                    ],
-                    "namespaceId": "public",
-                    "tableName": "supplierCatalog"
-                  },
-                  "target": {
-                    "columns": [
-                      "id"
-                    ],
-                    "namespaceId": "public",
-                    "tableName": "supplier"
-                  }
-                }
-              ],
-              "indexes": [
-                {
-                  "columns": [
-                    "supplierId"
-                  ],
-                  "name": "supplierCatalog_supplierId_idx_c4d9a8b9",
-                  "prefix": "supplierCatalog_supplierId_idx",
-                  "unique": false
-                }
-              ],
-              "primaryKey": {
-                "columns": [
-                  "id"
-                ]
-              },
-              "uniques": [
-                {
-                  "columns": [
-                    "supplierId",
-                    "productId"
-                  ]
-                }
-              ]
-            },
-            "supplierPerformance": {
-              "columns": {
-                "createdAt": {
-                  "codecId": "pg/timestamptz-temporal@1",
-                  "default": {
-                    "expression": "now()",
-                    "kind": "function"
-                  },
-                  "nativeType": "timestamptz",
-                  "nullable": false
-                },
-                "daysLate": {
-                  "codecId": "pg/int4@1",
-                  "default": {
-                    "kind": "literal",
-                    "value": 0
-                  },
-                  "nativeType": "int4",
-                  "nullable": false
-                },
-                "id": {
-                  "codecId": "pg/text@1",
-                  "nativeType": "text",
-                  "nullable": false
-                },
-                "purchaseOrderId": {
-                  "codecId": "pg/text@1",
-                  "nativeType": "text",
-                  "nullable": false
-                },
-                "qtyOrdered": {
-                  "codecId": "pg/int4@1",
-                  "nativeType": "int4",
-                  "nullable": false
-                },
-                "qtyReceived": {
-                  "codecId": "pg/int4@1",
-                  "nativeType": "int4",
-                  "nullable": false
-                },
-                "supplierId": {
-                  "codecId": "pg/text@1",
-                  "nativeType": "text",
-                  "nullable": false
-                }
-              },
-              "foreignKeys": [
-                {
-                  "onDelete": "cascade",
-                  "source": {
-                    "columns": [
-                      "supplierId"
-                    ],
-                    "namespaceId": "public",
-                    "tableName": "supplierPerformance"
-                  },
-                  "target": {
-                    "columns": [
-                      "id"
-                    ],
-                    "namespaceId": "public",
-                    "tableName": "supplier"
-                  }
-                }
-              ],
-              "indexes": [
-                {
-                  "columns": [
-                    "supplierId"
-                  ],
-                  "name": "supplierPerformance_supplierId_idx_c4d9a8b9",
-                  "prefix": "supplierPerformance_supplierId_idx",
-                  "unique": false
-                }
-              ],
-              "primaryKey": {
-                "columns": [
-                  "id"
-                ]
-              },
-              "uniques": []
             }
           }
         },
@@ -555,10 +586,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "86fefd44f97d88d0f4adfd9cb38a79dd620be246c1f2b6cb8f3828cb035198df"
+    "storageHash": "ac2e4f28fad06fd2b8607ad6ad9d9895144b87021755e3f5a979c2c33465056b"
   },
   "execution": {
-    "executionHash": "50a8db9f2f93e0cae5c2d34fd7d82a181803dd61476158a901fcd35e98c71dbc",
+    "executionHash": "f5da1aaf8cd860faecf529ebb74704cb3a3248245085887d68815c37ef539356",
     "mutations": {
       "defaults": [
         {
@@ -569,29 +600,29 @@
           "ref": {
             "column": "id",
             "namespace": "public",
+            "table": "delivery"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "deliveryMetric"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
             "table": "supplier"
-          }
-        },
-        {
-          "onCreate": {
-            "id": "uuidv4",
-            "kind": "generator"
-          },
-          "ref": {
-            "column": "id",
-            "namespace": "public",
-            "table": "supplierCatalog"
-          }
-        },
-        {
-          "onCreate": {
-            "id": "uuidv4",
-            "kind": "generator"
-          },
-          "ref": {
-            "column": "id",
-            "namespace": "public",
-            "table": "supplierPerformance"
           }
         }
       ]
