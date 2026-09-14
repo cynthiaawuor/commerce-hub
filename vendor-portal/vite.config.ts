@@ -7,11 +7,11 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // Forward /api/* to service-vendor so the browser never makes a cross-origin call in dev.
+      // Forward /vendor-api/* to service-vendor (which serves the same /vendor-api prefix),
+      // so the browser never makes a cross-origin call in dev.
       "/vendor-api": {
-        target: "http://localhost:3000/vendor-api",
+        target: "http://localhost:3000",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
       },
     },
   },
