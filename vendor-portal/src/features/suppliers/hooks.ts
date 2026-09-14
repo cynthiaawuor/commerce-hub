@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "../../lib/api-client";
 import type {
   CreateSupplierInput,
   UpdateSupplierInput,
 } from "../../types/supplier";
 import {
   createSupplier,
+  deleteSupplier,
   getSupplier,
   getSuppliers,
   updateSupplier,
@@ -24,6 +26,9 @@ export function useSupplier(id: string) {
   return useQuery({
     queryKey: supplierKeys.detail(id),
     queryFn: () => getSupplier(id),
+    // A missing supplier won't appear on retry, so show "not found" straight away
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && error.status === 404) && failureCount < 1,
   });
 }
 
@@ -44,5 +49,21 @@ export function useUpdateSupplier(id: string) {
     mutationFn: (input: UpdateSupplierInput) => updateSupplier(id, input),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: supplierKeys.all }),
+  });
+}
+
+export function useDeleteSupplier() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => deleteSupplier(id),
+    onSuccess: (_response, id) => {
+      // Drop the deleted supplier's cached detail (and catalog), then refresh the list
+      queryClient.removeQueries({ queryKey: supplierKeys.detail(id) });
+      return queryClient.invalidateQueries({
+        queryKey: supplierKeys.all,
+        exact: true,
+      });
+    },
   });
 }

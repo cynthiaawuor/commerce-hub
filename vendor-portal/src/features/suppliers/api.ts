@@ -34,3 +34,10 @@ export const updateSupplier = async (
   );
   return response.data;
 };
+
+export const deleteSupplier = (id: string) =>
+  apiRequest<{ message: string }>(
+    "vendor",
+    `/suppliers/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
