@@ -38,7 +38,6 @@ const createSupplier = async (createSupplierDto: CreateSupplierDto) => {
   if (errors) {
     throw new BadRequestError("Unprocessable supplier details", errors);
   }
-  const supplier = await db.orm.public.Supplier.create(obj!);
 
   return await db.orm.public.Supplier.create(obj!).catch((err) =>
     rethrowDuplicateEmail(err, obj!.email),
