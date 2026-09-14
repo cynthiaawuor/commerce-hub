@@ -14,8 +14,8 @@ app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Welcome to the TypeScript Express Server!" });
 });
 
-app.use("/suppliers/:supplierId/catalog-items", catalogRouter);
-app.use("/suppliers", suppliersRouter);
+app.use("/vendor-api/suppliers/:supplierId/catalog-items", catalogRouter);
+app.use("/vendor-api/suppliers", suppliersRouter);
 
 // Must be registered after every route
 app.use(notFoundHandler);
