@@ -1,4 +1,8 @@
-import { BadRequestError, ConflictError, NotFoundError } from "../core/http-error";
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+} from "../core/http-error";
 import parseAndValidate from "../core/validation";
 import { db, isUniqueViolation } from "../prisma/db";
 import { CreateSupplierDto } from "./dtos/create-supplier.dto";
@@ -34,8 +38,9 @@ const createSupplier = async (createSupplierDto: CreateSupplierDto) => {
   if (errors) {
     throw new BadRequestError("Unprocessable supplier details", errors);
   }
+  const supplier = await db.orm.public.Supplier.create(obj!);
 
-  return db.orm.public.Supplier.create(obj!).catch((err) =>
+  return await db.orm.public.Supplier.create(obj!).catch((err) =>
     rethrowDuplicateEmail(err, obj!.email),
   );
 };

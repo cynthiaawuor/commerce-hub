@@ -33,9 +33,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'c3b27c20677af3d584796711549ed532059e1bc78a0bdf118797f2daf9f1804c'>;
+  StorageHashBase<'5151cc09931549c870d99069294959a312117f1adb0ba7fa5947df7de9593cff'>;
 export type ExecutionHash =
-  ExecutionHashBase<'b62843dcd6da2f9d02fabd01fb676a19dbdcf82b6fe5faa538f8d98138840f36'>;
+  ExecutionHashBase<'a92ba02a339b773b6ccf121c72fef287ce1b4c803a0cd38775304d4391b0e29b'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -247,16 +247,16 @@ export type FieldOutputTypes = {
       readonly description: CodecTypes['pg/text@1']['output'];
       readonly unitPrice: CodecTypes['pg/float8@1']['output'];
       readonly unitsInStock: CodecTypes['pg/int4@1']['output'];
-      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
-      readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['output'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly supplierId: CodecTypes['pg/text@1']['output'];
     };
     readonly Delivery: {
       readonly id: CodecTypes['pg/text@1']['output'];
       readonly supplierId: CodecTypes['pg/text@1']['output'];
       readonly purchaseOrderId: CodecTypes['pg/text@1']['output'];
-      readonly expectedDate: CodecTypes['pg/timestamptz-string@1']['output'];
-      readonly actualDate: CodecTypes['pg/timestamptz-string@1']['output'];
+      readonly expectedDate: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly actualDate: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly daysLate: CodecTypes['pg/int4@1']['output'];
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
     };
@@ -266,7 +266,7 @@ export type FieldOutputTypes = {
       readonly qtyOrdered: CodecTypes['pg/int4@1']['output'];
       readonly qtyReceived: CodecTypes['pg/int4@1']['output'];
       readonly qtyRejected: CodecTypes['pg/int4@1']['output'];
-      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly deliveryId: CodecTypes['pg/text@1']['output'];
     };
     readonly Supplier: {
@@ -289,16 +289,16 @@ export type FieldInputTypes = {
       readonly description: CodecTypes['pg/text@1']['input'];
       readonly unitPrice: CodecTypes['pg/float8@1']['input'];
       readonly unitsInStock: CodecTypes['pg/int4@1']['input'];
-      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
-      readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly supplierId: CodecTypes['pg/text@1']['input'];
     };
     readonly Delivery: {
       readonly id: CodecTypes['pg/text@1']['input'];
       readonly supplierId: CodecTypes['pg/text@1']['input'];
       readonly purchaseOrderId: CodecTypes['pg/text@1']['input'];
-      readonly expectedDate: CodecTypes['pg/timestamptz-string@1']['input'];
-      readonly actualDate: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly expectedDate: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly actualDate: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly daysLate: CodecTypes['pg/int4@1']['input'];
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
     };
@@ -308,7 +308,7 @@ export type FieldInputTypes = {
       readonly qtyOrdered: CodecTypes['pg/int4@1']['input'];
       readonly qtyReceived: CodecTypes['pg/int4@1']['input'];
       readonly qtyRejected: CodecTypes['pg/int4@1']['input'];
-      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly deliveryId: CodecTypes['pg/text@1']['input'];
     };
     readonly Supplier: {
@@ -326,27 +326,27 @@ export type FieldInputTypes = {
 export type StorageColumnTypes = {
   readonly public: {
     readonly catalogItem: {
-      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly description: CodecTypes['pg/text@1']['output'];
       readonly id: CodecTypes['pg/text@1']['output'];
       readonly name: CodecTypes['pg/text@1']['output'];
       readonly supplierId: CodecTypes['pg/text@1']['output'];
       readonly unitPrice: CodecTypes['pg/float8@1']['output'];
       readonly unitsInStock: CodecTypes['pg/int4@1']['output'];
-      readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['output'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
     };
     readonly delivery: {
-      readonly actualDate: CodecTypes['pg/timestamptz-string@1']['output'];
+      readonly actualDate: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
       readonly daysLate: CodecTypes['pg/int4@1']['output'];
-      readonly expectedDate: CodecTypes['pg/timestamptz-string@1']['output'];
+      readonly expectedDate: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly id: CodecTypes['pg/text@1']['output'];
       readonly purchaseOrderId: CodecTypes['pg/text@1']['output'];
       readonly supplierId: CodecTypes['pg/text@1']['output'];
     };
     readonly deliveryMetric: {
       readonly catalogItemId: CodecTypes['pg/text@1']['output'];
-      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly deliveryId: CodecTypes['pg/text@1']['output'];
       readonly id: CodecTypes['pg/text@1']['output'];
       readonly qtyOrdered: CodecTypes['pg/int4@1']['output'];
@@ -368,27 +368,27 @@ export type StorageColumnTypes = {
 export type StorageColumnInputTypes = {
   readonly public: {
     readonly catalogItem: {
-      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly description: CodecTypes['pg/text@1']['input'];
       readonly id: CodecTypes['pg/text@1']['input'];
       readonly name: CodecTypes['pg/text@1']['input'];
       readonly supplierId: CodecTypes['pg/text@1']['input'];
       readonly unitPrice: CodecTypes['pg/float8@1']['input'];
       readonly unitsInStock: CodecTypes['pg/int4@1']['input'];
-      readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
     };
     readonly delivery: {
-      readonly actualDate: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly actualDate: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly daysLate: CodecTypes['pg/int4@1']['input'];
-      readonly expectedDate: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly expectedDate: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly id: CodecTypes['pg/text@1']['input'];
       readonly purchaseOrderId: CodecTypes['pg/text@1']['input'];
       readonly supplierId: CodecTypes['pg/text@1']['input'];
     };
     readonly deliveryMetric: {
       readonly catalogItemId: CodecTypes['pg/text@1']['input'];
-      readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly deliveryId: CodecTypes['pg/text@1']['input'];
       readonly id: CodecTypes['pg/text@1']['input'];
       readonly qtyOrdered: CodecTypes['pg/int4@1']['input'];
@@ -454,14 +454,15 @@ type ContractBase = Omit<
                 };
                 readonly createdAt: {
                   readonly nativeType: 'timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                   readonly nullable: false;
                   readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
                 };
                 readonly updatedAt: {
                   readonly nativeType: 'timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                   readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
                 };
                 readonly supplierId: {
                   readonly nativeType: 'text';
@@ -513,12 +514,12 @@ type ContractBase = Omit<
                 };
                 readonly expectedDate: {
                   readonly nativeType: 'timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                   readonly nullable: false;
                 };
                 readonly actualDate: {
                   readonly nativeType: 'timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                   readonly nullable: false;
                 };
                 readonly daysLate: {
@@ -595,7 +596,7 @@ type ContractBase = Omit<
                 };
                 readonly createdAt: {
                   readonly nativeType: 'timestamptz';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                   readonly nullable: false;
                   readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
                 };
@@ -753,14 +754,14 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: {
                   readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                 };
               };
               readonly updatedAt: {
                 readonly nullable: false;
                 readonly type: {
                   readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                 };
               };
               readonly supplierId: {
@@ -825,14 +826,14 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: {
                   readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                 };
               };
               readonly actualDate: {
                 readonly nullable: false;
                 readonly type: {
                   readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                 };
               };
               readonly daysLate: {
@@ -911,7 +912,7 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: {
                   readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
                 };
               };
               readonly deliveryId: {
@@ -1071,15 +1072,6 @@ type ContractBase = Omit<
             readonly column: 'id';
           };
           readonly onCreate: { readonly kind: 'generator'; readonly id: 'uuidv4' };
-        },
-        {
-          readonly ref: {
-            readonly namespace: 'public';
-            readonly table: 'catalogItem';
-            readonly column: 'updatedAt';
-          };
-          readonly onCreate: { readonly kind: 'generator'; readonly id: 'timestampNow' };
-          readonly onUpdate: { readonly kind: 'generator'; readonly id: 'timestampNow' };
         },
         {
           readonly ref: {

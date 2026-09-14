@@ -30,7 +30,7 @@
               "createdAt": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "kind": "scalar"
                 }
               },
@@ -79,7 +79,7 @@
               "updatedAt": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "kind": "scalar"
                 }
               }
@@ -152,14 +152,14 @@
               "actualDate": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "kind": "scalar"
                 }
               },
               "createdAt": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "kind": "scalar"
                 }
               },
@@ -173,7 +173,7 @@
               "expectedDate": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "kind": "scalar"
                 }
               },
@@ -271,7 +271,7 @@
               "createdAt": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "kind": "scalar"
                 }
               },
@@ -376,7 +376,7 @@
               "createdAt": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "kind": "scalar"
                 }
               },
@@ -425,7 +425,7 @@
               "updatedAt": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "kind": "scalar"
                 }
               }
@@ -505,7 +505,7 @@
             "catalogItem": {
               "columns": {
                 "createdAt": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
@@ -544,11 +544,7 @@
                   "nullable": false
                 },
                 "updatedAt": {
-                  "codecId": "pg/timestamptz-temporal@1",
-                  "default": {
-                    "expression": "now()",
-                    "kind": "function"
-                  },
+                  "codecId": "pg/timestamptz-string@1",
                   "nativeType": "timestamptz",
                   "nullable": false
                 }
@@ -592,12 +588,12 @@
             "delivery": {
               "columns": {
                 "actualDate": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "nativeType": "timestamptz",
                   "nullable": false
                 },
                 "createdAt": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
@@ -615,7 +611,7 @@
                   "nullable": false
                 },
                 "expectedDate": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "nativeType": "timestamptz",
                   "nullable": false
                 },
@@ -679,7 +675,7 @@
                   "nullable": false
                 },
                 "createdAt": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
@@ -781,7 +777,7 @@
             "supplier": {
               "columns": {
                 "createdAt": {
-                  "codecId": "pg/timestamptz-temporal@1",
+                  "codecId": "pg/timestamptz-string@1",
                   "default": {
                     "expression": "now()",
                     "kind": "function"
@@ -824,11 +820,7 @@
                   "nullable": false
                 },
                 "updatedAt": {
-                  "codecId": "pg/timestamptz-temporal@1",
-                  "default": {
-                    "expression": "now()",
-                    "kind": "function"
-                  },
+                  "codecId": "pg/timestamptz-string@1",
                   "nativeType": "timestamptz",
                   "nullable": false
                 }
@@ -854,10 +846,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "83623b6d6ed9dbb32d1a4dc8f4d84de3304e56b4441eff9b62b104c5e974953e"
+    "storageHash": "c3b27c20677af3d584796711549ed532059e1bc78a0bdf118797f2daf9f1804c"
   },
   "execution": {
-    "executionHash": "6abe8391c7ba737383687e3a0d540ab430373452ea943fed425501d646a0c6df",
+    "executionHash": "b62843dcd6da2f9d02fabd01fb676a19dbdcf82b6fe5faa538f8d98138840f36",
     "mutations": {
       "defaults": [
         {
@@ -867,6 +859,21 @@
           },
           "ref": {
             "column": "id",
+            "namespace": "public",
+            "table": "catalogItem"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updatedAt",
             "namespace": "public",
             "table": "catalogItem"
           }
@@ -900,6 +907,21 @@
           },
           "ref": {
             "column": "id",
+            "namespace": "public",
+            "table": "supplier"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updatedAt",
             "namespace": "public",
             "table": "supplier"
           }

@@ -1,25 +1,25 @@
 model Supplier {
-    id           String   @id @default(uuid())
+    id           String            @id @default(uuid())
     name         String
-    email        String   @unique
+    email        String            @unique
     phone        String
     paymentTerms String
-    status       String   @default("ACTIVE")
-    createdAt    DateTime @default(now())
-    updatedAt    DateTime @default(now())
+    status       String            @default("ACTIVE")
+    createdAt    TimestamptzString @default(now())
+    updatedAt    temporal.updatedAtString()
 
     deliveries Delivery[]
     catalog    CatalogItem[]
 }
 
 model CatalogItem {
-    id           String   @id @default(uuid())
+    id           String            @id @default(uuid())
     name         String
     description  String
     unitPrice    Float
     unitsInStock Int
-    createdAt    DateTime @default(now())
-    updatedAt    DateTime @default(now())
+    createdAt    TimestamptzString @default(now())
+    updatedAt    temporal.updatedAtString()
 
     supplierId String
 
@@ -38,11 +38,11 @@ model Delivery {
     purchaseOrderId String
 
     // Time Performance
-    expectedDate DateTime
-    actualDate   DateTime
-    daysLate     Int      @default(0) // 0 if early/on-time
+    expectedDate TimestamptzString
+    actualDate   TimestamptzString
+    daysLate     Int               @default(0) // 0 if early/on-time
 
-    createdAt DateTime @default(now())
+    createdAt TimestamptzString @default(now())
 
     // Relations
     metrics DeliveryMetric[]
@@ -60,7 +60,7 @@ model DeliveryMetric {
     qtyReceived Int
     qtyRejected Int @default(0) // Damaged, wrong item, unacceptable quality
 
-    createdAt DateTime @default(now())
+    createdAt TimestamptzString @default(now())
 
     // Relations
     deliveryId String
