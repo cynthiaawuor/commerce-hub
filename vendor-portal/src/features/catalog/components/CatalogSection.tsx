@@ -7,8 +7,13 @@ import { useCatalogItems, useCreateCatalogItem, useDeleteCatalogItem, useUpdateC
 import { CatalogItemFormDialog, type CatalogItemFormValues } from "./CatalogItemFormDialog";
 import { CatalogTable } from "./CatalogTable";
 
+type CatalogSectionProps = {
+  canAddItems: boolean;
+  supplierId: string;
+}
+
 // A supplier's catalog on the detail page: list, add, edit and remove items.
-export function CatalogSection({ supplierId }: { supplierId: string }) {
+export function CatalogSection({ supplierId, canAddItems }: CatalogSectionProps) {
   const { data: items, isPending, isError, error, refetch } = useCatalogItems(supplierId);
   const createItem = useCreateCatalogItem(supplierId);
   const updateItem = useUpdateCatalogItem(supplierId);
@@ -68,9 +73,16 @@ export function CatalogSection({ supplierId }: { supplierId: string }) {
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-6">
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold">Catalog items</h2>
-        <Button onClick={() => setFormTarget("new")}>Add item</Button>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold">Catalog items</h2>
+          {!canAddItems && (
+            <p className="mt-1 text-sm text-slate-500">Activate this supplier to add new catalog items.</p>
+          )}
+        </div>
+        <Button onClick={() => setFormTarget("new")} disabled={!canAddItems}>
+          Add item
+        </Button>
       </div>
 
       {renderContent()}

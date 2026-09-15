@@ -10,10 +10,18 @@ import { SupplierLoadError } from "../components/SupplierLoadError";
 import { SupplierStatusBadge } from "../components/SupplierStatusBadge";
 import { useDeleteSupplier, useSupplier, useUpdateSupplier } from "../hooks";
 
-function DetailItem({ label, children }: { label: string; children: ReactNode }) {
+function DetailItem({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
   return (
     <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        {label}
+      </dt>
       <dd className="mt-1 text-sm text-slate-900">{children}</dd>
     </div>
   );
@@ -37,7 +45,8 @@ export function SupplierDetailPage() {
 
   const isActive = supplier.status === "ACTIVE";
 
-  const toggleStatus = () => updateSupplier.mutate({ status: isActive ? "INACTIVE" : "ACTIVE" });
+  const toggleStatus = () =>
+    updateSupplier.mutate({ status: isActive ? "INACTIVE" : "ACTIVE" });
 
   const confirmDelete = () =>
     deleteSupplier.mutate(supplierId, {
@@ -56,11 +65,22 @@ export function SupplierDetailPage() {
         description={`Added ${formatDate(supplier.createdAt)}`}
         actions={
           <>
-            <Link to={`/suppliers/${supplier.id}/edit`} className={buttonClass("secondary")}>
+            <Link
+              to={`/suppliers/${supplier.id}/edit`}
+              className={buttonClass("secondary")}
+            >
               Edit
             </Link>
-            <Button variant="secondary" onClick={toggleStatus} disabled={updateSupplier.isPending}>
-              {updateSupplier.isPending ? "Saving…" : isActive ? "Deactivate" : "Activate"}
+            <Button
+              variant="secondary"
+              onClick={toggleStatus}
+              disabled={updateSupplier.isPending}
+            >
+              {updateSupplier.isPending
+                ? "Saving…"
+                : isActive
+                  ? "Deactivate"
+                  : "Activate"}
             </Button>
             <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
               Delete
@@ -70,7 +90,10 @@ export function SupplierDetailPage() {
       />
 
       {updateSupplier.isError && (
-        <p role="alert" className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+        <p
+          role="alert"
+          className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700"
+        >
           Could not update the status: {updateSupplier.error.message}
         </p>
       )}
@@ -92,12 +115,16 @@ export function SupplierDetailPage() {
                 {supplier.phone}
               </a>
             </DetailItem>
-            <DetailItem label="Payment terms">{supplier.paymentTerms}</DetailItem>
-            <DetailItem label="Last updated">{formatDate(supplier.updatedAt)}</DetailItem>
+            <DetailItem label="Payment terms">
+              {supplier.paymentTerms}
+            </DetailItem>
+            <DetailItem label="Last updated">
+              {formatDate(supplier.updatedAt)}
+            </DetailItem>
           </dl>
         </section>
 
-        <CatalogSection supplierId={supplier.id} />
+        <CatalogSection supplierId={supplier.id} canAddItems={isActive} />
       </div>
 
       <ConfirmDialog
