@@ -1,0 +1,15 @@
+services:
+  service-vendor:
+    image: postgres:18
+    container_name: commerce_postgres
+    environment:
+      POSTGRES_DB: service-vendor
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5434:5432'
+    networks:
+      - vendor_network
+
+networks:
+  vendor_network: {}
