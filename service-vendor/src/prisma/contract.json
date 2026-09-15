@@ -48,7 +48,21 @@
                   "kind": "scalar"
                 }
               },
+              "leadTimeDays": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
               "name": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "productId": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
@@ -66,13 +80,6 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/float8@1",
-                  "kind": "scalar"
-                }
-              },
-              "unitsInStock": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/int4@1",
                   "kind": "scalar"
                 }
               },
@@ -127,17 +134,20 @@
                 "id": {
                   "column": "id"
                 },
+                "leadTimeDays": {
+                  "column": "leadTimeDays"
+                },
                 "name": {
                   "column": "name"
+                },
+                "productId": {
+                  "column": "productId"
                 },
                 "supplierId": {
                   "column": "supplierId"
                 },
                 "unitPrice": {
                   "column": "unitPrice"
-                },
-                "unitsInStock": {
-                  "column": "unitsInStock"
                 },
                 "updatedAt": {
                   "column": "updatedAt"
@@ -523,7 +533,17 @@
                   "nativeType": "text",
                   "nullable": false
                 },
+                "leadTimeDays": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
                 "name": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "productId": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": false
@@ -536,11 +556,6 @@
                 "unitPrice": {
                   "codecId": "pg/float8@1",
                   "nativeType": "float8",
-                  "nullable": false
-                },
-                "unitsInStock": {
-                  "codecId": "pg/int4@1",
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "updatedAt": {
@@ -846,7 +861,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "c3b27c20677af3d584796711549ed532059e1bc78a0bdf118797f2daf9f1804c"
+    "storageHash": "8b8659f1792cff8fc4d17d8b78fc3206a023f788631aeada420353ce9643bd75"
   },
   "execution": {
     "executionHash": "b62843dcd6da2f9d02fabd01fb676a19dbdcf82b6fe5faa538f8d98138840f36",

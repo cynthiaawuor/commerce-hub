@@ -4,6 +4,11 @@ class UpdateCatalogItemDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  productId: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   name: string;
 
   @IsOptional()
@@ -18,7 +23,7 @@ class UpdateCatalogItemDto {
   @IsOptional()
   @IsInt()
   @Min(0)
-  unitsInStock: number;
+  leadTimeDays: number;
 }
 
 export { UpdateCatalogItemDto };

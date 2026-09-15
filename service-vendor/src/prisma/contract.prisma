@@ -17,11 +17,12 @@ model CatalogItem {
     name         String
     description  String
     unitPrice    Float
-    unitsInStock Int
+    leadTimeDays Int
     createdAt    TimestamptzString @default(now())
     updatedAt    temporal.updatedAtString()
 
     supplierId String
+    productId  String //relates to inventory service
 
     supplier        Supplier         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
     deliveryMetrics DeliveryMetric[]
