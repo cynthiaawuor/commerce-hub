@@ -5,6 +5,7 @@ import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { LoadingState } from "../../../components/ui/States";
 import { formatDate } from "../../../lib/format";
+import { CatalogSection } from "../../catalog/components/CatalogSection";
 import { SupplierLoadError } from "../components/SupplierLoadError";
 import { SupplierStatusBadge } from "../components/SupplierStatusBadge";
 import { useDeleteSupplier, useSupplier, useUpdateSupplier } from "../hooks";
@@ -96,13 +97,7 @@ export function SupplierDetailPage() {
           </dl>
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold">Catalog items</h2>
-          {/* TODO: CatalogTable + CatalogItemFormDialog (useCatalogItems) */}
-          <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-slate-500">
-            Catalog management coming next
-          </div>
-        </section>
+        <CatalogSection supplierId={supplier.id} />
       </div>
 
       <ConfirmDialog
