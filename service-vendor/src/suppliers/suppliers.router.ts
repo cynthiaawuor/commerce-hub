@@ -20,7 +20,6 @@ suppliersRouter.get("/:id", async (req: Request, res: Response) => {
 });
 
 suppliersRouter.post("/", async (req: Request, res: Response) => {
-  console.log("New supplier:", req.body);
   const createdSupplier = await createSupplier(req.body);
   res
     .status(201)
