@@ -583,22 +583,24 @@
                   }
                 }
               ],
-              "indexes": [
-                {
-                  "columns": [
-                    "supplierId"
-                  ],
-                  "name": "catalogItem_supplierId_idx_c4d9a8b9",
-                  "prefix": "catalogItem_supplierId_idx",
-                  "unique": false
-                }
-              ],
+              "indexes": [],
               "primaryKey": {
                 "columns": [
                   "id"
                 ]
               },
-              "uniques": []
+              "uniques": [
+                {
+                  "columns": [
+                    "supplierId"
+                  ]
+                },
+                {
+                  "columns": [
+                    "productId"
+                  ]
+                }
+              ]
             },
             "delivery": {
               "columns": {
@@ -861,7 +863,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "8b8659f1792cff8fc4d17d8b78fc3206a023f788631aeada420353ce9643bd75"
+    "storageHash": "53b2b725a286680c2cb4fd0b2060f9de691febf38d0dd8f95e60250998b1b5e2"
   },
   "execution": {
     "executionHash": "b62843dcd6da2f9d02fabd01fb676a19dbdcf82b6fe5faa538f8d98138840f36",

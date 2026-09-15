@@ -21,8 +21,8 @@ model CatalogItem {
     createdAt    TimestamptzString @default(now())
     updatedAt    temporal.updatedAtString()
 
-    supplierId String
-    productId  String //relates to inventory service
+    supplierId String @unique
+    productId  String @unique //relates to inventory service
 
     supplier        Supplier         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
     deliveryMetrics DeliveryMetric[]
