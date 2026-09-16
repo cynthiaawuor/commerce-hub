@@ -9,6 +9,9 @@ const findAll = async () => Supplier.all();
 // Returns null when no supplier has this id
 const findById = async (id: string) => Supplier.where({ id }).first();
 
+const existsById = async (id: string) =>
+  (await Supplier.where({ id }).select("id").first()) !== null;
+
 const insert = async (supplier: CreateSupplierDto) => Supplier.create(supplier);
 
 const update = async (id: string, supplier: UpdateSupplierDto) =>
@@ -18,4 +21,4 @@ const remove = async (id: string) => {
   await Supplier.where({ id }).delete();
 };
 
-export { findAll, findById, insert, update, remove };
+export { findAll, findById, insert, update, remove, existsById };

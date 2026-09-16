@@ -18,6 +18,13 @@ const rethrowDuplicateEmail = (err: unknown, email?: string): never => {
   throw err;
 };
 
+// For operations that only need to know the supplier is there, not what it contains
+const assertSupplierExists = async (id: string) => {
+  if (!(await supplierRepository.existsById(id))) {
+    throw new NotFoundError(`Supplier with ID ${id} not found`);
+  }
+};
+
 const getSuppliers = async () => supplierRepository.findAll();
 
 const getSupplier = async (id: string) => {
@@ -58,7 +65,7 @@ const updateSupplier = async (
     throw new BadRequestError("Unprocessable supplier details", errors);
   }
 
-  await getSupplier(id);
+  await assertSupplierExists(id);
 
   return supplierRepository
     .update(id, obj!)
@@ -66,7 +73,7 @@ const updateSupplier = async (
 };
 
 const deleteSupplier = async (id: string) => {
-  await getSupplier(id);
+  await assertSupplierExists(id);
 
   await supplierRepository.remove(id);
 };

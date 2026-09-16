@@ -7,7 +7,7 @@ import { UpdateCatalogItemDto } from "./dtos/update-catalog-item.dto";
 
 // Catalog items always belong to a supplier, so every lookup is scoped by supplierId.
 const assertSupplierExists = async (supplierId: string) => {
-  if (!(await supplierRepository.findById(supplierId))) {
+  if (!(await supplierRepository.existsById(supplierId))) {
     throw new NotFoundError(`Supplier with ID ${supplierId} not found`);
   }
 };
