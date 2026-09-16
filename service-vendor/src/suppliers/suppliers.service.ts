@@ -4,9 +4,10 @@ import {
   NotFoundError,
 } from "../core/http-error";
 import parseAndValidate from "../core/validation";
-import { db, isUniqueViolation } from "../prisma/db";
+import { isUniqueViolation } from "../prisma/db";
 import { CreateSupplierDto } from "./dtos/create-supplier.dto";
 import { UpdateSupplierDto } from "./dtos/update-supplier.dto";
+import * as supplierRepository from "./suppliers.repository";
 
 // email is the only unique column on Supplier, so a unique violation means a duplicate email.
 const rethrowDuplicateEmail = (err: unknown, email?: string): never => {
@@ -17,10 +18,10 @@ const rethrowDuplicateEmail = (err: unknown, email?: string): never => {
   throw err;
 };
 
-const getSuppliers = async () => db.orm.public.Supplier.all();
+const getSuppliers = async () => supplierRepository.findAll();
 
 const getSupplier = async (id: string) => {
-  const supplier = await db.orm.public.Supplier.where({ id }).first();
+  const supplier = await supplierRepository.findById(id);
 
   if (!supplier) {
     throw new NotFoundError(`Supplier with ID ${id} not found`);
@@ -39,9 +40,9 @@ const createSupplier = async (createSupplierDto: CreateSupplierDto) => {
     throw new BadRequestError("Unprocessable supplier details", errors);
   }
 
-  return await db.orm.public.Supplier.create(obj!).catch((err) =>
-    rethrowDuplicateEmail(err, obj!.email),
-  );
+  return await supplierRepository
+    .insert(obj!)
+    .catch((err) => rethrowDuplicateEmail(err, obj!.email));
 };
 
 const updateSupplier = async (
@@ -59,15 +60,15 @@ const updateSupplier = async (
 
   await getSupplier(id);
 
-  return db.orm.public.Supplier.where({ id })
-    .update(obj!)
+  return supplierRepository
+    .update(id, obj!)
     .catch((err) => rethrowDuplicateEmail(err, obj!.email));
 };
 
 const deleteSupplier = async (id: string) => {
   await getSupplier(id);
 
-  await db.orm.public.Supplier.where({ id }).delete();
+  await supplierRepository.remove(id);
 };
 
 export {
