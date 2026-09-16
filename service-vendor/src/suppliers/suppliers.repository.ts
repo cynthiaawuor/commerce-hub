@@ -4,9 +4,6 @@ import type { UpdateSupplierDto } from "./dtos/update-supplier.dto";
 
 const Supplier = db.orm.public.Supplier;
 
-// Database access only. Validation, 404s and duplicate-email handling live in the service layer,
-// so swapping the ORM out would only touch this file.
-
 const findAll = async () => Supplier.all();
 
 // Returns null when no supplier has this id

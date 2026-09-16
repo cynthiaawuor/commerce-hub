@@ -7,12 +7,7 @@ import { errorHandler, notFoundHandler } from "./core/error-handler";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware to parse JSON bodies
 app.use(express.json());
-
-app.get("/", (req: Request, res: Response) => {
-  res.json({ message: "Welcome to the TypeScript Express Server!" });
-});
 
 app.use("/vendor-api/suppliers/:supplierId/catalog-items", catalogRouter);
 app.use("/vendor-api/suppliers", suppliersRouter);
