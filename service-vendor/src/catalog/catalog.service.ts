@@ -1,14 +1,13 @@
 import { BadRequestError, NotFoundError } from "../core/http-error";
 import parseAndValidate from "../core/validation";
-import { db } from "../prisma/db";
+import * as supplierRepository from "../suppliers/suppliers.repository";
+import * as catalogRepository from "./catalog.repository";
 import { CreateCatalogItemDto } from "./dtos/create-catalog-item.dto";
 import { UpdateCatalogItemDto } from "./dtos/update-catalog-item.dto";
 
 // Catalog items always belong to a supplier, so every lookup is scoped by supplierId.
 const assertSupplierExists = async (supplierId: string) => {
-  const supplier = await db.orm.public.Supplier.where({ id: supplierId }).first();
-
-  if (!supplier) {
+  if (!(await supplierRepository.findById(supplierId))) {
     throw new NotFoundError(`Supplier with ID ${supplierId} not found`);
   }
 };
@@ -16,13 +15,13 @@ const assertSupplierExists = async (supplierId: string) => {
 const getCatalogItems = async (supplierId: string) => {
   await assertSupplierExists(supplierId);
 
-  return db.orm.public.CatalogItem.where({ supplierId }).all();
+  return catalogRepository.findAllBySupplier(supplierId);
 };
 
 const getCatalogItem = async (supplierId: string, id: string) => {
   await assertSupplierExists(supplierId);
 
-  const catalogItem = await db.orm.public.CatalogItem.where({ id, supplierId }).first();
+  const catalogItem = await catalogRepository.findById(supplierId, id);
 
   if (!catalogItem) {
     throw new NotFoundError(`Catalog item with ID ${id} not found`);
@@ -46,8 +45,7 @@ const createCatalogItem = async (
 
   await assertSupplierExists(supplierId);
 
-  // supplierId comes from the route, never from the body
-  return db.orm.public.CatalogItem.create({ ...obj!, supplierId });
+  return catalogRepository.insert(supplierId, obj!);
 };
 
 const updateCatalogItem = async (
@@ -66,14 +64,13 @@ const updateCatalogItem = async (
 
   await getCatalogItem(supplierId, id);
 
-  // Pin supplierId so an item can't be moved to another supplier through the body
-  return db.orm.public.CatalogItem.where({ id, supplierId }).update({ ...obj!, supplierId });
+  return catalogRepository.update(supplierId, id, obj!);
 };
 
 const deleteCatalogItem = async (supplierId: string, id: string) => {
   await getCatalogItem(supplierId, id);
 
-  await db.orm.public.CatalogItem.where({ id, supplierId }).delete();
+  await catalogRepository.remove(supplierId, id);
 };
 
 export {
