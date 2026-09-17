@@ -1,0 +1,28 @@
+{
+  // Same compiler settings as service-vendor, so both services behave the same way
+  "compilerOptions": {
+    "module": "preserve",
+    "target": "esnext",
+    "types": ["node"],
+
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+
+    // class-validator / class-transformer use legacy decorators
+    "experimentalDecorators": true
+  }
+}
