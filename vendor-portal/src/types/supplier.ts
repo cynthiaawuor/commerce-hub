@@ -12,6 +12,23 @@ export type Supplier = {
   updatedAt: string;
 };
 
-export type CreateSupplierInput = Pick<Supplier, "name" | "email" | "phone" | "paymentTerms">;
+export type SupplierQuery = {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: SupplierStatus;
+};
 
-export type UpdateSupplierInput = Partial<CreateSupplierInput & { status: SupplierStatus }>;
+export type Paginated<T> = {
+  data: T[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type CreateSupplierInput = Pick<
+  Supplier,
+  "name" | "email" | "phone" | "paymentTerms"
+>;
+
+export type UpdateSupplierInput = Partial<
+  CreateSupplierInput & { status: SupplierStatus }
+>;
