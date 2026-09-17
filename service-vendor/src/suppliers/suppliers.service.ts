@@ -6,8 +6,12 @@ import {
 import parseAndValidate from "../core/validation";
 import { isUniqueViolation } from "../prisma/db";
 import { CreateSupplierDto } from "./dtos/create-supplier.dto";
+import { ListSuppliersQueryDto } from "./dtos/list-suppliers-query.dto";
 import { UpdateSupplierDto } from "./dtos/update-supplier.dto";
 import * as supplierRepository from "./suppliers.repository";
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 20;
 
 // email is the only unique column on Supplier, so a unique violation means a duplicate email.
 const rethrowDuplicateEmail = (err: unknown, email?: string): never => {
@@ -25,7 +29,27 @@ const assertSupplierExists = async (id: string) => {
   }
 };
 
-const getSuppliers = async () => supplierRepository.findAll();
+const getSuppliers = async (query: unknown = {}) => {
+  const { obj, errors } = await parseAndValidate(ListSuppliersQueryDto, query);
+
+  if (errors) {
+    throw new BadRequestError("Unprocessable list query", errors);
+  }
+
+  const { page = DEFAULT_PAGE, limit = DEFAULT_LIMIT, search, status } = obj!;
+
+  const filters = { search, status };
+
+  const [data, total] = await Promise.all([
+    supplierRepository.findPage(filters, (page - 1) * limit, limit),
+    supplierRepository.count(filters),
+  ]);
+
+  return {
+    data,
+    meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
+};
 
 const getSupplier = async (id: string) => {
   const supplier = await supplierRepository.findById(id);

@@ -7,8 +7,8 @@ type IdParams = { id: string };
 // Errors thrown by the service are passed on to the error middleware by Express 5:
 // manual try-catch blocks or next(err) calls are not needed.
 
-const getSuppliers = async (_req: Request, res: Response) => {
-  res.status(200).json(await supplierService.getSuppliers());
+const getSuppliers = async (req: Request, res: Response) => {
+  res.status(200).json(await supplierService.getSuppliers(req.query));
 };
 
 const getSupplier = async (req: Request<IdParams>, res: Response) => {
