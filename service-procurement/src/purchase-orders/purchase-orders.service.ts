@@ -1,9 +1,16 @@
+import type { CurrentUser } from "../core/current-user";
 import { isUniqueViolation } from "../core/db-errors";
 import {
   BadRequestError,
   ConflictError,
+  ForbiddenError,
   NotFoundError,
 } from "../core/http-error";
+import { canApprove, requiredRoleFor } from "./approval-authority";
+import { canTransition } from "./purchase-order-state";
+import type { PurchaseOrderStatus } from "./purchase-order-status";
+import { CancelPurchaseOrderDto } from "./dtos/cancel-purchase-order.dto";
+import { RejectPurchaseOrderDto } from "./dtos/reject-purchase-order.dto";
 import { toCents } from "../core/money";
 import parseAndValidate from "../core/validation";
 import * as vendorClient from "../vendor/vendor.client";
@@ -223,12 +230,125 @@ const deletePurchaseOrder = async (id: string) => {
   await purchaseOrderRepository.remove(id);
 };
 
+// Loads the order and checks the move is one the lifecycle allows, so every action
+// below shares the same 404 and 409 behaviour.
+const assertCanTransition = async (id: string, to: PurchaseOrderStatus) => {
+  const purchaseOrder = await purchaseOrderRepository.findSummaryById(id);
+
+  if (!purchaseOrder) {
+    throw new NotFoundError(`Purchase order with ID ${id} not found`);
+  }
+
+  if (!canTransition(purchaseOrder.status, to)) {
+    throw new ConflictError(
+      `Purchase order ${purchaseOrder.poNumber} is ${purchaseOrder.status} and cannot move to ${to}`,
+    );
+  }
+
+  return purchaseOrder;
+};
+
+// Hands the order to an approver. An order with no lines has nothing to approve, and its
+// total of zero would slip under any approval limit, so it is refused here.
+const submitPurchaseOrder = async (id: string, user: CurrentUser) => {
+  const purchaseOrder = await assertCanTransition(id, "PENDING_APPROVAL");
+
+  if ((await purchaseOrderRepository.countLines(id)) === 0) {
+    throw new ConflictError(
+      `Purchase order ${purchaseOrder.poNumber} has no lines and cannot be submitted`,
+    );
+  }
+
+  return purchaseOrderRepository.changeStatus(id, {
+    fromStatus: purchaseOrder.status,
+    toStatus: "PENDING_APPROVAL",
+    changedBy: user.id,
+    reason: null,
+  });
+};
+
+// The commitment point: after this the business owes the supplier for these goods,
+// so the approver must hold enough authority for the amount.
+const approvePurchaseOrder = async (id: string, user: CurrentUser) => {
+  const purchaseOrder = await assertCanTransition(id, "APPROVED");
+
+  if (!canApprove(user.role, purchaseOrder.totalCents)) {
+    throw new ForbiddenError(
+      `Purchase order ${purchaseOrder.poNumber} needs ${requiredRoleFor(purchaseOrder.totalCents)} approval; role ${user.role} is not enough`,
+    );
+  }
+
+  return purchaseOrderRepository.changeStatus(id, {
+    fromStatus: purchaseOrder.status,
+    toStatus: "APPROVED",
+    changedBy: user.id,
+    reason: null,
+    approval: { approvedBy: user.id, approvedAt: new Date().toISOString() },
+  });
+};
+
+// Sends the order back to the buyer, who edits it and submits again
+const rejectPurchaseOrder = async (
+  id: string,
+  body: unknown,
+  user: CurrentUser,
+) => {
+  const { obj, errors } = await parseAndValidate(RejectPurchaseOrderDto, body);
+
+  if (errors) {
+    throw new BadRequestError("A rejection reason is required", errors);
+  }
+
+  const purchaseOrder = await assertCanTransition(id, "REJECTED");
+
+  return purchaseOrderRepository.changeStatus(id, {
+    fromStatus: purchaseOrder.status,
+    toStatus: "REJECTED",
+    changedBy: user.id,
+    reason: obj!.reason,
+  });
+};
+
+const cancelPurchaseOrder = async (
+  id: string,
+  body: unknown,
+  user: CurrentUser,
+) => {
+  const { obj, errors } = await parseAndValidate(CancelPurchaseOrderDto, body);
+
+  if (errors) {
+    throw new BadRequestError("Unprocessable cancellation", errors);
+  }
+
+  const purchaseOrder = await assertCanTransition(id, "CANCELLED");
+
+  return purchaseOrderRepository.changeStatus(id, {
+    fromStatus: purchaseOrder.status,
+    toStatus: "CANCELLED",
+    changedBy: user.id,
+    reason: obj!.reason ?? null,
+  });
+};
+
+const getPurchaseOrderHistory = async (id: string) => {
+  if (!(await purchaseOrderRepository.findSummaryById(id))) {
+    throw new NotFoundError(`Purchase order with ID ${id} not found`);
+  }
+
+  return purchaseOrderRepository.findStatusHistory(id);
+};
+
 export {
   addPurchaseOrderLine,
+  approvePurchaseOrder,
+  cancelPurchaseOrder,
   createPurchaseOrder,
   deletePurchaseOrder,
   getPurchaseOrder,
+  getPurchaseOrderHistory,
   listPurchaseOrders,
+  rejectPurchaseOrder,
   removePurchaseOrderLine,
+  submitPurchaseOrder,
   updatePurchaseOrderLine,
 };
