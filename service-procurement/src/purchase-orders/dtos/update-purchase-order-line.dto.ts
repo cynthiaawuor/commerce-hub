@@ -1,23 +1,11 @@
-import { IsInt, IsOptional, Max, Min } from "class-validator";
+import { IsInt, Min } from "class-validator";
 
-// The product itself can't be changed: remove the line and add the right one instead.
-// The service rejects a body with none of these fields.
+// Only the quantity can change. The unit cost and lead time were locked from Vendor
+// Management when the line was added, and the product itself cannot be swapped
 class UpdatePurchaseOrderLineDto {
-  @IsOptional()
   @IsInt()
   @Min(1)
   quantityOrdered: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  unitCostCents: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(365)
-  leadTimeDays: number;
 }
 
 export { UpdatePurchaseOrderLineDto };
