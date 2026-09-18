@@ -33,6 +33,14 @@ class ConflictError extends HttpError {
   }
 }
 
+// A service we depend on (Vendor Management) is down, too slow, or erroring.
+// The caller's request was fine, so this is not a 4xx.
+class ServiceUnavailableError extends HttpError {
+  constructor(message: string) {
+    super(503, message);
+  }
+}
+
 class InternalServerError extends HttpError {
   constructor(message: string) {
     super(500, message);
@@ -45,5 +53,6 @@ export {
   ForbiddenError,
   NotFoundError,
   ConflictError,
+  ServiceUnavailableError,
   InternalServerError,
 };
