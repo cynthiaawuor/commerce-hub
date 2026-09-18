@@ -73,10 +73,35 @@ const deleteCatalogItem = async (supplierId: string, id: string) => {
   await catalogRepository.remove(supplierId, id);
 };
 
+// Answers "who can supply product X, at what price and on what terms?" for Procurement.
+// Only active suppliers are offered, because an archived supplier must not receive new orders.
+const getProductSuppliers = async (productId: string) => {
+  const catalogItems = await catalogRepository.findByProductId(productId);
+
+  return catalogItems
+    .filter((item) => item.supplier.status === "ACTIVE")
+    .map((item) => ({
+      supplierId: item.supplier.id,
+      supplierName: item.supplier.name,
+      paymentTerms: item.supplier.paymentTerms,
+      catalogItemId: item.id,
+      productId: item.productId,
+      productName: item.name,
+      unitPrice: item.unitPrice,
+      leadTimeDays: item.leadTimeDays,
+    }))
+    // Cheapest first, then the quicker delivery when prices match
+    .sort(
+      (a, b) =>
+        a.unitPrice - b.unitPrice || a.leadTimeDays - b.leadTimeDays,
+    );
+};
+
 export {
   createCatalogItem,
   updateCatalogItem,
   deleteCatalogItem,
   getCatalogItem,
   getCatalogItems,
+  getProductSuppliers,
 };

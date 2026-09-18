@@ -27,4 +27,13 @@ const remove = async (supplierId: string, id: string) => {
   await CatalogItem.where({ id, supplierId }).delete();
 };
 
-export { findAllBySupplier, findById, insert, update, remove };
+// Every supplier that lists this product, with the supplier attached so the service can
+// drop inactive ones. Procurement uses this when a buyer orders a product.
+const findByProductId = async (productId: string) =>
+  CatalogItem.where({ productId })
+    .include("supplier", (supplier) =>
+      supplier.select("id", "name", "status", "paymentTerms"),
+    )
+    .all();
+
+export { findAllBySupplier, findByProductId, findById, insert, update, remove };
