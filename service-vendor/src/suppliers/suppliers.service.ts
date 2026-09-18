@@ -4,9 +4,14 @@ import {
   NotFoundError,
 } from "../core/http-error";
 import parseAndValidate from "../core/validation";
-import { db, isUniqueViolation } from "../prisma/db";
+import { isUniqueViolation } from "../prisma/db";
 import { CreateSupplierDto } from "./dtos/create-supplier.dto";
+import { ListSuppliersQueryDto } from "./dtos/list-suppliers-query.dto";
 import { UpdateSupplierDto } from "./dtos/update-supplier.dto";
+import * as supplierRepository from "./suppliers.repository";
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 20;
 
 // email is the only unique column on Supplier, so a unique violation means a duplicate email.
 const rethrowDuplicateEmail = (err: unknown, email?: string): never => {
@@ -17,10 +22,37 @@ const rethrowDuplicateEmail = (err: unknown, email?: string): never => {
   throw err;
 };
 
-const getSuppliers = async () => db.orm.public.Supplier.all();
+// For operations that only need to know the supplier is there, not what it contains
+const assertSupplierExists = async (id: string) => {
+  if (!(await supplierRepository.existsById(id))) {
+    throw new NotFoundError(`Supplier with ID ${id} not found`);
+  }
+};
+
+const getSuppliers = async (query: unknown = {}) => {
+  const { obj, errors } = await parseAndValidate(ListSuppliersQueryDto, query);
+
+  if (errors) {
+    throw new BadRequestError("Unprocessable list query", errors);
+  }
+
+  const { page = DEFAULT_PAGE, limit = DEFAULT_LIMIT, search, status } = obj!;
+
+  const filters = { search, status };
+
+  const [data, total] = await Promise.all([
+    supplierRepository.findPage(filters, (page - 1) * limit, limit),
+    supplierRepository.count(filters),
+  ]);
+
+  return {
+    data,
+    meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
+};
 
 const getSupplier = async (id: string) => {
-  const supplier = await db.orm.public.Supplier.where({ id }).first();
+  const supplier = await supplierRepository.findById(id);
 
   if (!supplier) {
     throw new NotFoundError(`Supplier with ID ${id} not found`);
@@ -39,9 +71,9 @@ const createSupplier = async (createSupplierDto: CreateSupplierDto) => {
     throw new BadRequestError("Unprocessable supplier details", errors);
   }
 
-  return await db.orm.public.Supplier.create(obj!).catch((err) =>
-    rethrowDuplicateEmail(err, obj!.email),
-  );
+  return await supplierRepository
+    .insert(obj!)
+    .catch((err) => rethrowDuplicateEmail(err, obj!.email));
 };
 
 const updateSupplier = async (
@@ -57,17 +89,17 @@ const updateSupplier = async (
     throw new BadRequestError("Unprocessable supplier details", errors);
   }
 
-  await getSupplier(id);
+  await assertSupplierExists(id);
 
-  return db.orm.public.Supplier.where({ id })
-    .update(obj!)
+  return supplierRepository
+    .update(id, obj!)
     .catch((err) => rethrowDuplicateEmail(err, obj!.email));
 };
 
 const deleteSupplier = async (id: string) => {
-  await getSupplier(id);
+  await assertSupplierExists(id);
 
-  await db.orm.public.Supplier.where({ id }).delete();
+  await supplierRepository.remove(id);
 };
 
 export {

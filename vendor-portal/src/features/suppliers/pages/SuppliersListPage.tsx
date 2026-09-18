@@ -1,8 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Button, buttonClass } from "../../../components/ui/Button";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { EmptyState, ErrorState, LoadingState } from "../../../components/ui/States";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../../../components/ui/States";
 import { inputClass } from "../../../components/ui/styles";
 import type { SupplierStatus } from "../../../types/supplier";
 import { SupplierTable } from "../components/SupplierTable";
@@ -13,28 +17,28 @@ const PAGE_SIZE = 10;
 type StatusFilter = "ALL" | SupplierStatus;
 
 export function SuppliersListPage() {
-  const { data: suppliers, isPending, isError, error, refetch } = useSuppliers();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [page, setPage] = useState(1);
 
-  // GET /suppliers returns every supplier, so search, filter and paginate in the browser for now.
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
+  // Debounce so we don't fire a request on every keystroke; reset to page 1 on new search.
 
-    return (suppliers ?? [])
-      .filter((supplier) => status === "ALL" || supplier.status === status)
-      .filter(
-        (supplier) =>
-          !term || supplier.name.toLowerCase().includes(term) || supplier.email.toLowerCase().includes(term),
-      )
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [suppliers, search, status]);
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(id);
+  }, [search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const firstIndex = (currentPage - 1) * PAGE_SIZE;
-  const pageItems = filtered.slice(firstIndex, firstIndex + PAGE_SIZE);
+  const { data, isPending, isError, error, refetch, isPlaceholderData } =
+    useSuppliers({
+      page,
+      limit: PAGE_SIZE,
+      search: debouncedSearch.trim() || undefined,
+      status: status === "ALL" ? undefined : status,
+    });
 
   const addSupplierLink = (
     <Link to="/suppliers/new" className={buttonClass()}>
@@ -61,7 +65,10 @@ export function SuppliersListPage() {
       );
     }
 
-    if (suppliers.length === 0) {
+    const { data: suppliers, meta } = data;
+    const hasFilters = debouncedSearch.trim() !== "" || status !== "ALL";
+
+    if (meta.total === 0 && !hasFilters) {
       return (
         <EmptyState
           title="No suppliers yet"
@@ -70,6 +77,8 @@ export function SuppliersListPage() {
         />
       );
     }
+
+    const firstIndex = (meta.page - 1) * meta.limit;
 
     return (
       <>
@@ -100,24 +109,32 @@ export function SuppliersListPage() {
           </select>
         </div>
 
-        {filtered.length === 0 ? (
-          <EmptyState title="No suppliers match your search" message="Try a different name, email or status." />
+        {meta.total === 0 ? (
+          <EmptyState
+            title="No suppliers match your search"
+            message="Try a different name, email or status."
+          />
         ) : (
           <>
-            <SupplierTable suppliers={pageItems} />
+            <SupplierTable suppliers={suppliers} />
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
               <p>
-                Showing {firstIndex + 1}–{firstIndex + pageItems.length} of {filtered.length}
+                Showing {firstIndex + 1}–{firstIndex + suppliers.length} of{" "}
+                {meta.total}
               </p>
               <div className="flex gap-2">
-                <Button variant="secondary" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={meta.page === 1 || isPlaceholderData}
+                >
                   Previous
                 </Button>
                 <Button
                   variant="secondary"
-                  onClick={() => setPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={meta.page >= meta.totalPages || isPlaceholderData}
                 >
                   Next
                 </Button>

@@ -27,4 +27,15 @@ class ConflictError extends HttpError {
   }
 }
 
-export { HttpError, BadRequestError, NotFoundError, ConflictError };
+class InternalServerError extends HttpError {
+  constructor(message: string) {
+    super(500, message);
+  }
+}
+export {
+  HttpError,
+  BadRequestError,
+  NotFoundError,
+  ConflictError,
+  InternalServerError,
+};

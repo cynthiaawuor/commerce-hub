@@ -1,5 +1,11 @@
-import { IsEmail, IsEnum, IsOptional, IsPhoneNumber, IsString } from "class-validator";
-import SupplierStatus from "../entities/supplier-status.enum";
+import {
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsPhoneNumber,
+  IsString,
+} from "class-validator";
+import SupplierStatus from "../supplier-status.enum";
 
 class UpdateSupplierDto {
   @IsOptional()

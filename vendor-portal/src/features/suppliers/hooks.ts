@@ -1,7 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { ApiError } from "../../lib/api-client";
 import type {
   CreateSupplierInput,
+  SupplierQuery,
   UpdateSupplierInput,
 } from "../../types/supplier";
 import {
@@ -15,11 +21,17 @@ import {
 // Every supplier key starts with "suppliers", so invalidating supplierKeys.all refreshes lists and details.
 export const supplierKeys = {
   all: ["suppliers"] as const,
+  lists: () => [...supplierKeys.all, "list"] as const,
+  list: (params: SupplierQuery) => [...supplierKeys.lists(), params] as const,
   detail: (id: string) => ["suppliers", id] as const,
 };
 
-export function useSuppliers() {
-  return useQuery({ queryKey: supplierKeys.all, queryFn: getSuppliers });
+export function useSuppliers(params: SupplierQuery) {
+  return useQuery({
+    queryKey: supplierKeys.list(params),
+    queryFn: () => getSuppliers(params),
+    placeholderData: keepPreviousData,
+  });
 }
 
 export function useSupplier(id: string) {
