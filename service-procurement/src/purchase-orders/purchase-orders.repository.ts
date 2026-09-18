@@ -76,7 +76,9 @@ const findById = async (id: string) =>
 
 // Just the fields the rules need, without loading the lines
 const findSummaryById = async (id: string) =>
-  PurchaseOrder.where({ id }).select("id", "status", "poNumber").first();
+  PurchaseOrder.where({ id })
+    .select("id", "status", "poNumber", "supplierId")
+    .first();
 
 const findLine = async (purchaseOrderId: string, id: string) =>
   PurchaseOrderLine.where({ id, purchaseOrderId }).first();

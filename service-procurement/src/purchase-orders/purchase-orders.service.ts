@@ -4,7 +4,9 @@ import {
   ConflictError,
   NotFoundError,
 } from "../core/http-error";
+import { toCents } from "../core/money";
 import parseAndValidate from "../core/validation";
+import * as vendorClient from "../vendor/vendor.client";
 import { AddPurchaseOrderLineDto } from "./dtos/add-purchase-order-line.dto";
 import { CreatePurchaseOrderDto } from "./dtos/create-purchase-order.dto";
 import { ListPurchaseOrdersQueryDto } from "./dtos/list-purchase-orders-query.dto";
@@ -39,11 +41,27 @@ const assertDraft = async (purchaseOrderId: string) => {
 };
 
 // A new order always starts as a DRAFT with no lines, so its total is 0 until lines are added.
+// The supplier's name and payment terms are copied from Vendor Management and frozen here:
+// the business commits to the terms that applied on the day it ordered.
 const createPurchaseOrder = async (body: unknown, createdBy: string) => {
   const { obj, errors } = await parseAndValidate(CreatePurchaseOrderDto, body);
 
   if (errors) {
     throw new BadRequestError("Unprocessable purchase order details", errors);
+  }
+
+  const supplier = await vendorClient.getSupplier(obj!.supplierId);
+
+  if (!supplier) {
+    throw new BadRequestError(
+      `Supplier ${obj!.supplierId} does not exist in Vendor Management`,
+    );
+  }
+
+  if (supplier.status !== "ACTIVE") {
+    throw new ConflictError(
+      `Supplier ${supplier.name} is ${supplier.status} and cannot receive new orders`,
+    );
   }
 
   // The PO number is derived from how many orders exist. Two buyers creating an order at
@@ -53,7 +71,9 @@ const createPurchaseOrder = async (body: unknown, createdBy: string) => {
 
     try {
       return await purchaseOrderRepository.insertDraft({
-        ...obj!,
+        supplierId: supplier.id,
+        supplierName: supplier.name,
+        paymentTerms: supplier.paymentTerms,
         notes: obj!.notes ?? null,
         poNumber: formatPoNumber(sequence),
         createdBy,
@@ -109,20 +129,37 @@ const getPurchaseOrder = async (id: string) => {
   return purchaseOrder;
 };
 
+// The buyer says which product and how many; everything else is read from the supplier's
+// catalog in Vendor Management and locked onto the line at this moment.
 const addPurchaseOrderLine = async (purchaseOrderId: string, body: unknown) => {
-  const { obj, errors } = await parseAndValidate(
-    AddPurchaseOrderLineDto,
-    body,
-  );
+  const { obj, errors } = await parseAndValidate(AddPurchaseOrderLineDto, body);
 
   if (errors) {
     throw new BadRequestError("Unprocessable purchase order line", errors);
   }
 
-  await assertDraft(purchaseOrderId);
+  const purchaseOrder = await assertDraft(purchaseOrderId);
+
+  const offers = await vendorClient.getProductSuppliers(obj!.productId);
+  const offer = offers.find(
+    (candidate) => candidate.supplierId === purchaseOrder.supplierId,
+  );
+
+  if (!offer) {
+    throw new BadRequestError(
+      `Supplier ${purchaseOrder.supplierId} is not approved to supply product ${obj!.productId}`,
+    );
+  }
 
   try {
-    return await purchaseOrderRepository.insertLine(purchaseOrderId, obj!);
+    return await purchaseOrderRepository.insertLine(purchaseOrderId, {
+      productId: offer.productId,
+      catalogItemId: offer.catalogItemId,
+      productName: offer.productName,
+      quantityOrdered: obj!.quantityOrdered,
+      unitCostCents: toCents(offer.unitPrice),
+      leadTimeDays: offer.leadTimeDays,
+    });
   } catch (err) {
     // (purchaseOrderId, productId) is unique: order more of a product by raising its quantity
     if (isUniqueViolation(err)) {
@@ -134,6 +171,8 @@ const addPurchaseOrderLine = async (purchaseOrderId: string, body: unknown) => {
   }
 };
 
+// Only the quantity changes here. The unit cost stays as it was locked when the line
+// was added, which is the price the business committed to.
 const updatePurchaseOrderLine = async (
   purchaseOrderId: string,
   lineId: string,
@@ -148,17 +187,6 @@ const updatePurchaseOrderLine = async (
     throw new BadRequestError("Unprocessable purchase order line", errors);
   }
 
-  // class-validator checks fields one by one, so an empty body has to be caught here
-  const changes = Object.fromEntries(
-    Object.entries(obj!).filter(([, value]) => value !== undefined),
-  );
-
-  if (Object.keys(changes).length === 0) {
-    throw new BadRequestError(
-      "Provide at least one of quantityOrdered, unitCostCents or leadTimeDays",
-    );
-  }
-
   await assertDraft(purchaseOrderId);
 
   if (!(await purchaseOrderRepository.findLine(purchaseOrderId, lineId))) {
@@ -167,7 +195,9 @@ const updatePurchaseOrderLine = async (
     );
   }
 
-  return purchaseOrderRepository.updateLine(purchaseOrderId, lineId, changes);
+  return purchaseOrderRepository.updateLine(purchaseOrderId, lineId, {
+    quantityOrdered: obj!.quantityOrdered,
+  });
 };
 
 const removePurchaseOrderLine = async (
