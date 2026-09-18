@@ -14,8 +14,18 @@ const canApprove = (role: string, totalCents: bigint | number) => {
   return BigInt(totalCents) <= BUYER_APPROVAL_LIMIT_CENTS;
 };
 
+// Separation of duties: whoever raised an order cannot be the one who signs it off,
+// whatever their role. Approval is a second pair of eyes, not a formality.
+const isSelfApproval = (createdBy: string, approverId: string) =>
+  createdBy === approverId;
+
 // Used in the error message when someone approves above their limit
 const requiredRoleFor = (totalCents: bigint | number) =>
   BigInt(totalCents) > BUYER_APPROVAL_LIMIT_CENTS ? "MANAGER" : "BUYER";
 
-export { BUYER_APPROVAL_LIMIT_CENTS, canApprove, requiredRoleFor };
+export {
+  BUYER_APPROVAL_LIMIT_CENTS,
+  canApprove,
+  isSelfApproval,
+  requiredRoleFor,
+};

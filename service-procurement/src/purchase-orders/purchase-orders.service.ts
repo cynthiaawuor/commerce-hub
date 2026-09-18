@@ -6,7 +6,11 @@ import {
   ForbiddenError,
   NotFoundError,
 } from "../core/http-error";
-import { canApprove, requiredRoleFor } from "./approval-authority";
+import {
+  canApprove,
+  isSelfApproval,
+  requiredRoleFor,
+} from "./approval-authority";
 import { canTransition } from "./purchase-order-state";
 import type { PurchaseOrderStatus } from "./purchase-order-status";
 import { CancelPurchaseOrderDto } from "./dtos/cancel-purchase-order.dto";
@@ -271,6 +275,12 @@ const submitPurchaseOrder = async (id: string, user: CurrentUser) => {
 // so the approver must hold enough authority for the amount.
 const approvePurchaseOrder = async (id: string, user: CurrentUser) => {
   const purchaseOrder = await assertCanTransition(id, "APPROVED");
+
+  if (isSelfApproval(purchaseOrder.createdBy, user.id)) {
+    throw new ForbiddenError(
+      `Purchase order ${purchaseOrder.poNumber} must be approved by someone other than the buyer who raised it`,
+    );
+  }
 
   if (!canApprove(user.role, purchaseOrder.totalCents)) {
     throw new ForbiddenError(

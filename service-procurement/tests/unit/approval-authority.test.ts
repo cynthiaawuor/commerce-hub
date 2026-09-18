@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BUYER_APPROVAL_LIMIT_CENTS,
   canApprove,
+  isSelfApproval,
   requiredRoleFor,
 } from "../../src/purchase-orders/approval-authority";
 
@@ -21,6 +22,16 @@ describe("canApprove", () => {
 
   it("refuses an unknown role", () => {
     expect(canApprove("WAREHOUSE", 1n)).toBe(false);
+  });
+});
+
+describe("isSelfApproval", () => {
+  it("spots the buyer approving their own order", () => {
+    expect(isSelfApproval("buyer@test", "buyer@test")).toBe(true);
+  });
+
+  it("allows anyone else to approve it", () => {
+    expect(isSelfApproval("buyer@test", "manager@test")).toBe(false);
   });
 });
 
