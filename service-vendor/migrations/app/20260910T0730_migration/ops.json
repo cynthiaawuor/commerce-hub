@@ -1,0 +1,382 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.supplier",
+    "label": "Create table \"supplier\"",
+    "summary": "Creates table \"supplier\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "supplier"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"supplier\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"supplier\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"supplier\"",
+        "sql": "CREATE TABLE \"public\".\"supplier\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"email\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  \"paymentTerms\" text NOT NULL,\n  \"status\" text DEFAULT 'ACTIVE' NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"supplier\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"supplier\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.supplierCatalog",
+    "label": "Create table \"supplierCatalog\"",
+    "summary": "Creates table \"supplierCatalog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "supplierCatalog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"supplierCatalog\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"supplierCatalog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"supplierCatalog\"",
+        "sql": "CREATE TABLE \"public\".\"supplierCatalog\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"leadTimeDays\" int4 NOT NULL,\n  \"productId\" text NOT NULL,\n  \"supplierId\" text NOT NULL,\n  \"unitCost\" float8 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"supplierCatalog\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"supplierCatalog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.supplierPerformance",
+    "label": "Create table \"supplierPerformance\"",
+    "summary": "Creates table \"supplierPerformance\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "supplierPerformance"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"supplierPerformance\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"supplierPerformance\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"supplierPerformance\"",
+        "sql": "CREATE TABLE \"public\".\"supplierPerformance\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"daysLate\" int4 DEFAULT 0 NOT NULL,\n  \"id\" text NOT NULL,\n  \"purchaseOrderId\" text NOT NULL,\n  \"qtyOrdered\" int4 NOT NULL,\n  \"qtyReceived\" int4 NOT NULL,\n  \"supplierId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"supplierPerformance\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"supplierPerformance\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.supplier.supplier_email_key",
+    "label": "Add unique constraint on \"supplier\" (email)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "supplier_email_key",
+        "table": "supplier"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"supplier_email_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "supplier_email_key",
+          "public",
+          "\"public\".\"supplier\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"supplier_email_key\"",
+        "sql": "ALTER TABLE \"public\".\"supplier\" ADD CONSTRAINT \"supplier_email_key\" UNIQUE (\"email\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"supplier_email_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "supplier_email_key",
+          "public",
+          "\"public\".\"supplier\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.supplierCatalog.supplierCatalog_supplierId_productId_key",
+    "label": "Add unique constraint on \"supplierCatalog\" (supplierId, productId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "supplierCatalog_supplierId_productId_key",
+        "table": "supplierCatalog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"supplierCatalog_supplierId_productId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "supplierCatalog_supplierId_productId_key",
+          "public",
+          "\"public\".\"supplierCatalog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"supplierCatalog_supplierId_productId_key\"",
+        "sql": "ALTER TABLE \"public\".\"supplierCatalog\" ADD CONSTRAINT \"supplierCatalog_supplierId_productId_key\" UNIQUE (\"supplierId\", \"productId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"supplierCatalog_supplierId_productId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "supplierCatalog_supplierId_productId_key",
+          "public",
+          "\"public\".\"supplierCatalog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.supplierCatalog.supplierCatalog_supplierId_idx_c4d9a8b9",
+    "label": "Create index \"supplierCatalog_supplierId_idx_c4d9a8b9\" on \"supplierCatalog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "supplierCatalog_supplierId_idx_c4d9a8b9",
+        "table": "supplierCatalog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"supplierCatalog_supplierId_idx_c4d9a8b9\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"supplierCatalog_supplierId_idx_c4d9a8b9\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"supplierCatalog_supplierId_idx_c4d9a8b9\"",
+        "sql": "CREATE INDEX \"supplierCatalog_supplierId_idx_c4d9a8b9\" ON \"public\".\"supplierCatalog\" (\"supplierId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"supplierCatalog_supplierId_idx_c4d9a8b9\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"supplierCatalog_supplierId_idx_c4d9a8b9\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.supplierPerformance.supplierPerformance_supplierId_idx_c4d9a8b9",
+    "label": "Create index \"supplierPerformance_supplierId_idx_c4d9a8b9\" on \"supplierPerformance\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "supplierPerformance_supplierId_idx_c4d9a8b9",
+        "table": "supplierPerformance"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"supplierPerformance_supplierId_idx_c4d9a8b9\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"supplierPerformance_supplierId_idx_c4d9a8b9\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"supplierPerformance_supplierId_idx_c4d9a8b9\"",
+        "sql": "CREATE INDEX \"supplierPerformance_supplierId_idx_c4d9a8b9\" ON \"public\".\"supplierPerformance\" (\"supplierId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"supplierPerformance_supplierId_idx_c4d9a8b9\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"supplierPerformance_supplierId_idx_c4d9a8b9\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.supplierCatalog.supplierCatalog_supplierId_fkey",
+    "label": "Add foreign key \"supplierCatalog_supplierId_fkey\" on \"supplierCatalog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "supplierCatalog_supplierId_fkey",
+        "table": "supplierCatalog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"supplierCatalog_supplierId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "supplierCatalog_supplierId_fkey",
+          "public",
+          "\"public\".\"supplierCatalog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"supplierCatalog_supplierId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"supplierCatalog\"\nADD CONSTRAINT \"supplierCatalog_supplierId_fkey\"\nFOREIGN KEY (\"supplierId\")\nREFERENCES \"public\".\"supplier\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"supplierCatalog_supplierId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "supplierCatalog_supplierId_fkey",
+          "public",
+          "\"public\".\"supplierCatalog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.supplierPerformance.supplierPerformance_supplierId_fkey",
+    "label": "Add foreign key \"supplierPerformance_supplierId_fkey\" on \"supplierPerformance\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "supplierPerformance_supplierId_fkey",
+        "table": "supplierPerformance"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"supplierPerformance_supplierId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "supplierPerformance_supplierId_fkey",
+          "public",
+          "\"public\".\"supplierPerformance\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"supplierPerformance_supplierId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"supplierPerformance\"\nADD CONSTRAINT \"supplierPerformance_supplierId_fkey\"\nFOREIGN KEY (\"supplierId\")\nREFERENCES \"public\".\"supplier\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"supplierPerformance_supplierId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "supplierPerformance_supplierId_fkey",
+          "public",
+          "\"public\".\"supplierPerformance\""
+        ]
+      }
+    ]
+  }
+]

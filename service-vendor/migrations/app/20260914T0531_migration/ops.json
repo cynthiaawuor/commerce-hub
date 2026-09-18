@@ -1,0 +1,541 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.catalogItem",
+    "label": "Create table \"catalogItem\"",
+    "summary": "Creates table \"catalogItem\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "catalogItem"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"catalogItem\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalogItem\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"catalogItem\"",
+        "sql": "CREATE TABLE \"public\".\"catalogItem\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"description\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  \"supplierId\" text NOT NULL,\n  \"unitPrice\" float8 NOT NULL,\n  \"unitsInStock\" int4 NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"catalogItem\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalogItem\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.delivery",
+    "label": "Create table \"delivery\"",
+    "summary": "Creates table \"delivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "delivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"delivery\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"delivery\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"delivery\"",
+        "sql": "CREATE TABLE \"public\".\"delivery\" (\n  \"actualDate\" timestamptz NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"daysLate\" int4 DEFAULT 0 NOT NULL,\n  \"expectedDate\" timestamptz NOT NULL,\n  \"id\" text NOT NULL,\n  \"purchaseOrderId\" text NOT NULL,\n  \"supplierId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"delivery\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"delivery\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.deliveryMetric",
+    "label": "Create table \"deliveryMetric\"",
+    "summary": "Creates table \"deliveryMetric\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "deliveryMetric"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"deliveryMetric\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"deliveryMetric\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"deliveryMetric\"",
+        "sql": "CREATE TABLE \"public\".\"deliveryMetric\" (\n  \"catalogItemId\" text NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deliveryId\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"qtyOrdered\" int4 NOT NULL,\n  \"qtyReceived\" int4 NOT NULL,\n  \"qtyRejected\" int4 DEFAULT 0 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"deliveryMetric\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"deliveryMetric\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.supplier",
+    "label": "Create table \"supplier\"",
+    "summary": "Creates table \"supplier\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "supplier"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"supplier\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"supplier\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"supplier\"",
+        "sql": "CREATE TABLE \"public\".\"supplier\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"email\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  \"paymentTerms\" text NOT NULL,\n  \"phone\" text NOT NULL,\n  \"status\" text DEFAULT 'ACTIVE' NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"supplier\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"supplier\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.supplier.supplier_email_key",
+    "label": "Add unique constraint on \"supplier\" (email)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "supplier_email_key",
+        "table": "supplier"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"supplier_email_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "supplier_email_key",
+          "public",
+          "\"public\".\"supplier\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"supplier_email_key\"",
+        "sql": "ALTER TABLE \"public\".\"supplier\" ADD CONSTRAINT \"supplier_email_key\" UNIQUE (\"email\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"supplier_email_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "supplier_email_key",
+          "public",
+          "\"public\".\"supplier\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.catalogItem.catalogItem_supplierId_idx_c4d9a8b9",
+    "label": "Create index \"catalogItem_supplierId_idx_c4d9a8b9\" on \"catalogItem\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "catalogItem_supplierId_idx_c4d9a8b9",
+        "table": "catalogItem"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"catalogItem_supplierId_idx_c4d9a8b9\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalogItem_supplierId_idx_c4d9a8b9\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"catalogItem_supplierId_idx_c4d9a8b9\"",
+        "sql": "CREATE INDEX \"catalogItem_supplierId_idx_c4d9a8b9\" ON \"public\".\"catalogItem\" (\"supplierId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"catalogItem_supplierId_idx_c4d9a8b9\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"catalogItem_supplierId_idx_c4d9a8b9\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.delivery.delivery_supplierId_idx_c4d9a8b9",
+    "label": "Create index \"delivery_supplierId_idx_c4d9a8b9\" on \"delivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "delivery_supplierId_idx_c4d9a8b9",
+        "table": "delivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"delivery_supplierId_idx_c4d9a8b9\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"delivery_supplierId_idx_c4d9a8b9\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"delivery_supplierId_idx_c4d9a8b9\"",
+        "sql": "CREATE INDEX \"delivery_supplierId_idx_c4d9a8b9\" ON \"public\".\"delivery\" (\"supplierId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"delivery_supplierId_idx_c4d9a8b9\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"delivery_supplierId_idx_c4d9a8b9\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.deliveryMetric.deliveryMetric_catalogItemId_idx_1f6910ce",
+    "label": "Create index \"deliveryMetric_catalogItemId_idx_1f6910ce\" on \"deliveryMetric\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "deliveryMetric_catalogItemId_idx_1f6910ce",
+        "table": "deliveryMetric"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"deliveryMetric_catalogItemId_idx_1f6910ce\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"deliveryMetric_catalogItemId_idx_1f6910ce\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"deliveryMetric_catalogItemId_idx_1f6910ce\"",
+        "sql": "CREATE INDEX \"deliveryMetric_catalogItemId_idx_1f6910ce\" ON \"public\".\"deliveryMetric\" (\"catalogItemId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"deliveryMetric_catalogItemId_idx_1f6910ce\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"deliveryMetric_catalogItemId_idx_1f6910ce\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.deliveryMetric.deliveryMetric_deliveryId_idx_ebc950f6",
+    "label": "Create index \"deliveryMetric_deliveryId_idx_ebc950f6\" on \"deliveryMetric\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "deliveryMetric_deliveryId_idx_ebc950f6",
+        "table": "deliveryMetric"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"deliveryMetric_deliveryId_idx_ebc950f6\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"deliveryMetric_deliveryId_idx_ebc950f6\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"deliveryMetric_deliveryId_idx_ebc950f6\"",
+        "sql": "CREATE INDEX \"deliveryMetric_deliveryId_idx_ebc950f6\" ON \"public\".\"deliveryMetric\" (\"deliveryId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"deliveryMetric_deliveryId_idx_ebc950f6\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"deliveryMetric_deliveryId_idx_ebc950f6\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.catalogItem.catalogItem_supplierId_fkey",
+    "label": "Add foreign key \"catalogItem_supplierId_fkey\" on \"catalogItem\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "catalogItem_supplierId_fkey",
+        "table": "catalogItem"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"catalogItem_supplierId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalogItem_supplierId_fkey",
+          "public",
+          "\"public\".\"catalogItem\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"catalogItem_supplierId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"catalogItem\"\nADD CONSTRAINT \"catalogItem_supplierId_fkey\"\nFOREIGN KEY (\"supplierId\")\nREFERENCES \"public\".\"supplier\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"catalogItem_supplierId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "catalogItem_supplierId_fkey",
+          "public",
+          "\"public\".\"catalogItem\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.delivery.delivery_supplierId_fkey",
+    "label": "Add foreign key \"delivery_supplierId_fkey\" on \"delivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "delivery_supplierId_fkey",
+        "table": "delivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"delivery_supplierId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "delivery_supplierId_fkey",
+          "public",
+          "\"public\".\"delivery\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"delivery_supplierId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"delivery\"\nADD CONSTRAINT \"delivery_supplierId_fkey\"\nFOREIGN KEY (\"supplierId\")\nREFERENCES \"public\".\"supplier\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"delivery_supplierId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "delivery_supplierId_fkey",
+          "public",
+          "\"public\".\"delivery\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.deliveryMetric.deliveryMetric_deliveryId_fkey",
+    "label": "Add foreign key \"deliveryMetric_deliveryId_fkey\" on \"deliveryMetric\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "deliveryMetric_deliveryId_fkey",
+        "table": "deliveryMetric"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"deliveryMetric_deliveryId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "deliveryMetric_deliveryId_fkey",
+          "public",
+          "\"public\".\"deliveryMetric\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"deliveryMetric_deliveryId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"deliveryMetric\"\nADD CONSTRAINT \"deliveryMetric_deliveryId_fkey\"\nFOREIGN KEY (\"deliveryId\")\nREFERENCES \"public\".\"delivery\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"deliveryMetric_deliveryId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "deliveryMetric_deliveryId_fkey",
+          "public",
+          "\"public\".\"deliveryMetric\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.deliveryMetric.deliveryMetric_catalogItemId_fkey",
+    "label": "Add foreign key \"deliveryMetric_catalogItemId_fkey\" on \"deliveryMetric\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "deliveryMetric_catalogItemId_fkey",
+        "table": "deliveryMetric"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"deliveryMetric_catalogItemId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "deliveryMetric_catalogItemId_fkey",
+          "public",
+          "\"public\".\"deliveryMetric\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"deliveryMetric_catalogItemId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"deliveryMetric\"\nADD CONSTRAINT \"deliveryMetric_catalogItemId_fkey\"\nFOREIGN KEY (\"catalogItemId\")\nREFERENCES \"public\".\"catalogItem\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"deliveryMetric_catalogItemId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "deliveryMetric_catalogItemId_fkey",
+          "public",
+          "\"public\".\"deliveryMetric\""
+        ]
+      }
+    ]
+  }
+]
