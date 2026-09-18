@@ -11,5 +11,19 @@ services:
     networks:
       - vendor_network
 
+  # Procurement's private database, on its own network so no other service can reach it
+  procurement-db:
+    image: postgres:18
+    container_name: procurement_postgres
+    environment:
+      POSTGRES_DB: service-procurement
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5435:5432'
+    networks:
+      - procurement_network
+
 networks:
   vendor_network: {}
+  procurement_network: {}
