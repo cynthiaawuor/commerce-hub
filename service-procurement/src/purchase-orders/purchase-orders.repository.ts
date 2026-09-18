@@ -77,7 +77,7 @@ const findById = async (id: string) =>
 // Just the fields the rules need, without loading the lines
 const findSummaryById = async (id: string) =>
   PurchaseOrder.where({ id })
-    .select("id", "status", "poNumber", "supplierId")
+    .select("id", "status", "poNumber", "supplierId", "totalCents")
     .first();
 
 const findLine = async (purchaseOrderId: string, id: string) =>
@@ -154,14 +154,59 @@ const removeLine = async (purchaseOrderId: string, id: string) =>
     await recalculateTotal(tx, purchaseOrderId);
   });
 
+const countLines = async (purchaseOrderId: string) =>
+  (
+    await PurchaseOrderLine.where({ purchaseOrderId }).aggregate((a) => ({
+      total: a.count(),
+    }))
+  ).total;
+
+// Oldest first: the audit trail reads as the story of the order
+const findStatusHistory = async (purchaseOrderId: string) =>
+  db.orm.public.PurchaseOrderStatusChange.where({ purchaseOrderId })
+    .orderBy((change) => change.createdAt.asc())
+    .all();
+
+type StatusChange = {
+  fromStatus: PurchaseOrderStatus;
+  toStatus: PurchaseOrderStatus;
+  changedBy: string;
+  reason: string | null;
+  // Only set when approving, so the order records who signed it off and when
+  approval?: { approvedBy: string; approvedAt: string } | undefined;
+};
+
+// The new status and its history row are written together, so the audit trail can
+// never miss a change, and a failed write leaves the status untouched.
+const changeStatus = async (id: string, change: StatusChange) =>
+  db.transaction(async (tx) => {
+    const updated = await tx.orm.public.PurchaseOrder.where({ id }).update({
+      status: change.toStatus,
+      ...(change.approval ?? {}),
+    });
+
+    await tx.orm.public.PurchaseOrderStatusChange.create({
+      purchaseOrderId: id,
+      fromStatus: change.fromStatus,
+      toStatus: change.toStatus,
+      changedBy: change.changedBy,
+      reason: change.reason,
+    });
+
+    return updated;
+  });
+
 // Lines and history rows are removed by the database (onDelete: Cascade)
 const remove = async (id: string) => {
   await PurchaseOrder.where({ id }).delete();
 };
 
 export {
+  changeStatus,
   count,
+  countLines,
   findById,
+  findStatusHistory,
   findLine,
   findPage,
   findSummaryById,
