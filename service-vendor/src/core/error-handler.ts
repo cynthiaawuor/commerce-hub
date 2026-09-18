@@ -1,13 +1,20 @@
 import type { NextFunction, Request, Response } from "express";
 import { isUniqueViolation } from "../prisma/db";
-import { HttpError } from "./http-error";
+import { HttpError, InternalServerError } from "./http-error";
 
 function notFoundHandler(req: Request, res: Response) {
-  res.status(404).json({ error: { message: `Route ${req.method} ${req.path} not found` } });
+  res
+    .status(404)
+    .json({ error: { message: `Route ${req.method} ${req.path} not found` } });
 }
 
 // Express 5 forwards errors thrown in async handlers here automatically.
-function errorHandler(err: any, _req: Request, res: Response, next: NextFunction) {
+function errorHandler(
+  err: any,
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   // A response is already streaming; let Express close the connection.
   if (res.headersSent) {
     next(err);
@@ -15,7 +22,9 @@ function errorHandler(err: any, _req: Request, res: Response, next: NextFunction
   }
 
   if (err instanceof HttpError) {
-    res.status(err.status).json({ error: { message: err.message, details: err.details } });
+    res
+      .status(err.status)
+      .json({ error: { message: err.message, details: err.details } });
     return;
   }
 
@@ -33,12 +42,20 @@ function errorHandler(err: any, _req: Request, res: Response, next: NextFunction
 
   // Fallback for unique constraints a service didn't translate into a ConflictError
   if (isUniqueViolation(err)) {
-    res.status(409).json({ error: { message: "A record with the same unique value already exists" } });
+    res.status(409).json({
+      error: {
+        message: "A record with the same unique value already exists",
+      },
+    });
     return;
   }
-
   console.error(err);
-  res.status(500).json({ error: { message: "Internal server error" } });
+  const fallbackError = new InternalServerError(
+    "An unexpected error occurred. Please try again later.",
+  );
+  res
+    .status(fallbackError.status)
+    .json({ error: { message: fallbackError.message } });
 }
 
 export { notFoundHandler, errorHandler };
