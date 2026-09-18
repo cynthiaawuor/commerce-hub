@@ -9,7 +9,9 @@
     "start": "node dist/server.js",
     "contract:emit": "prisma contract emit",
     "db:plan": "prisma migration plan",
-    "db:migrate": "prisma db migrate"
+    "db:migrate": "prisma db migrate",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -29,6 +31,7 @@
     "@types/node": "^22.20.2",
     "prisma": "8.0.0-rc.10",
     "tsx": "^4.23.13",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
   }
 }
