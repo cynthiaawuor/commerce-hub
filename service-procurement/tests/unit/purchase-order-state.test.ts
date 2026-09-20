@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canReceiveGoods,
   canTransition,
   isEditable,
   isFinal,
@@ -40,6 +41,19 @@ describe("isEditable", () => {
     expect(isEditable("DRAFT")).toBe(true);
     expect(isEditable("PENDING_APPROVAL")).toBe(false);
     expect(isEditable("APPROVED")).toBe(false);
+  });
+});
+
+describe("canReceiveGoods", () => {
+  it("accepts deliveries only for orders the supplier was sent", () => {
+    expect(canReceiveGoods("SENT")).toBe(true);
+    expect(canReceiveGoods("PARTIALLY_RECEIVED")).toBe(true);
+  });
+
+  it("refuses deliveries for orders that never reached the supplier", () => {
+    expect(canReceiveGoods("APPROVED")).toBe(false);
+    expect(canReceiveGoods("DRAFT")).toBe(false);
+    expect(canReceiveGoods("CLOSED")).toBe(false);
   });
 });
 

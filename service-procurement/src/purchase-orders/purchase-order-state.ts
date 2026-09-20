@@ -23,6 +23,10 @@ const canTransition = (from: PurchaseOrderStatus, to: PurchaseOrderStatus) =>
 // Lines and supplier details are frozen the moment an order leaves DRAFT
 const isEditable = (status: PurchaseOrderStatus) => status === "DRAFT";
 
+// Goods can only be booked against an order the supplier has actually been sent
+const canReceiveGoods = (status: PurchaseOrderStatus) =>
+  status === "SENT" || status === "PARTIALLY_RECEIVED";
+
 // No move leads out of a final status
 const isFinal = (status: PurchaseOrderStatus) =>
   ALLOWED_TRANSITIONS[status].length === 0;
@@ -30,4 +34,10 @@ const isFinal = (status: PurchaseOrderStatus) =>
 const allowedTransitionsFrom = (status: PurchaseOrderStatus) =>
   ALLOWED_TRANSITIONS[status];
 
-export { allowedTransitionsFrom, canTransition, isEditable, isFinal };
+export {
+  allowedTransitionsFrom,
+  canReceiveGoods,
+  canTransition,
+  isEditable,
+  isFinal,
+};
