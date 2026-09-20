@@ -4,6 +4,10 @@
   "target": "postgres",
   "profileHash": "3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2",
   "roots": {
+    "outboxEvent": {
+      "model": "OutboxEvent",
+      "namespace": "public"
+    },
     "purchaseOrder": {
       "model": "PurchaseOrder",
       "namespace": "public"
@@ -60,6 +64,97 @@
           }
         },
         "models": {
+          "OutboxEvent": {
+            "fields": {
+              "aggregateId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "attempts": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "eventType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastError": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "payload": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "publishedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "aggregateId": {
+                  "column": "aggregateId"
+                },
+                "attempts": {
+                  "column": "attempts"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "eventType": {
+                  "column": "eventType"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "lastError": {
+                  "column": "lastError"
+                },
+                "payload": {
+                  "column": "payload"
+                },
+                "publishedAt": {
+                  "column": "publishedAt"
+                }
+              },
+              "namespaceId": "public",
+              "table": "outboxEvent"
+            }
+          },
           "PurchaseOrder": {
             "fields": {
               "approvedAt": {
@@ -503,6 +598,76 @@
       "public": {
         "entries": {
           "table": {
+            "outboxEvent": {
+              "columns": {
+                "aggregateId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "attempts": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "eventType": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "lastError": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "payload": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "publishedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "publishedAt",
+                    "createdAt"
+                  ],
+                  "name": "outboxEvent_publishedAt_createdAt_idx_e43e9da7",
+                  "prefix": "outboxEvent_publishedAt_createdAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "purchaseOrder": {
               "checks": [
                 {
@@ -852,12 +1017,23 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "6b7fb0c04ad8b619fb411d8cd87e33a494736185d86e527d270d20bb9a185320"
+    "storageHash": "190fa07dfcb260a7655186213e9ff6beedfacc708ab36e8eee232d0ad46760b0"
   },
   "execution": {
-    "executionHash": "8d15ca9cfb09b74faf49ba6725dbe7620eff5c08deb47bca5549d6b529fbb3bc",
+    "executionHash": "4cca2ebb83805093ac5a971ae0be9799c29310a3c67a0995ba86c21e18478a48",
     "mutations": {
       "defaults": [
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "outboxEvent"
+          }
+        },
         {
           "onCreate": {
             "id": "uuidv4",

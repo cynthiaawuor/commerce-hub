@@ -88,3 +88,29 @@ model PurchaseOrderStatusChange {
 
     purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 }
+
+// ------------------------------------------------------
+// Transactional outbox. An event is written in the same transaction as the change that
+// caused it, so the two can never disagree: no event for a failed approval, and no
+// approval whose event was lost because the broker was down. A worker publishes the
+// rows afterwards and stamps publishedAt.
+// ------------------------------------------------------
+model OutboxEvent {
+    id String @id @default(uuid())
+
+    // e.g. "PurchaseOrderApproved"
+    eventType String
+    // The purchase order the event is about
+    aggregateId String
+    // The event body, as JSON text
+    payload String
+
+    publishedAt TimestamptzString?
+    // Raised on every failed publish, so a poisoned message can be spotted
+    attempts    Int                @default(0)
+    lastError   String?
+
+    createdAt TimestamptzString @default(now())
+
+    @@index([publishedAt, createdAt])
+}
