@@ -24,6 +24,29 @@ services:
     networks:
       - procurement_network
 
+  # Event bus. Every service publishes domain events here; subscribers read at their own
+  # pace, and a durable queue holds messages while a subscriber is down.
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: commerce_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - '5672:5672'
+      # Management UI at http://localhost:15672 (guest/guest)
+      - '15672:15672'
+    healthcheck:
+      # Run as the rabbitmq user: as root it would create a root-owned .erlang.cookie
+      # that the server (running as rabbitmq) then cannot read
+      test: ['CMD-SHELL', 'gosu rabbitmq rabbitmq-diagnostics -q ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - events_network
+
 networks:
   vendor_network: {}
   procurement_network: {}
+  events_network: {}
