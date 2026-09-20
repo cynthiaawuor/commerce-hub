@@ -9,4 +9,23 @@ const toPurchaseOrderResponse = <T extends { totalCents: bigint }>({
   totalCents: Number(totalCents),
 });
 
-export { toPurchaseOrderResponse };
+type LineWithQuantities = {
+  quantityOrdered: number;
+  quantityReceived: number;
+};
+
+// Receiving needs to know what is still expected, not just what was ordered,
+// so each line carries the outstanding quantity.
+const toPurchaseOrderWithOutstanding = <
+  T extends { totalCents: bigint; lines: LineWithQuantities[] },
+>(
+  purchaseOrder: T,
+) => ({
+  ...toPurchaseOrderResponse(purchaseOrder),
+  lines: purchaseOrder.lines.map((line) => ({
+    ...line,
+    quantityOutstanding: line.quantityOrdered - line.quantityReceived,
+  })),
+});
+
+export { toPurchaseOrderResponse, toPurchaseOrderWithOutstanding };

@@ -154,6 +154,60 @@ const removeLine = async (purchaseOrderId: string, id: string) =>
     await recalculateTotal(tx, purchaseOrderId);
   });
 
+// Orders a delivery can still be booked against. Receiving calls this when a truck
+// arrives: "is there an open, approved order for these goods?"
+const findOpen = async (supplierId?: string | undefined) => {
+  let purchaseOrders = PurchaseOrder.where((po) =>
+    po.status.in(["SENT", "PARTIALLY_RECEIVED"]),
+  );
+
+  if (supplierId) {
+    purchaseOrders = purchaseOrders.where({ supplierId });
+  }
+
+  // Oldest first: the earliest order is the one most likely being delivered
+  return purchaseOrders
+    .include("lines", (line) => line.orderBy((l) => l.productName.asc()))
+    .orderBy((po) => po.createdAt.asc())
+    .all();
+};
+
+type ReceivedQuantity = { lineId: string; quantityReceived: number };
+
+// Received quantities and any resulting status change are written together, so the
+// order's status always matches its lines.
+const recordReceipt = async (
+  id: string,
+  received: ReceivedQuantity[],
+  statusChange: StatusChange | null,
+) =>
+  db.transaction(async (tx) => {
+    for (const line of received) {
+      await tx.orm.public.PurchaseOrderLine.where({
+        id: line.lineId,
+        purchaseOrderId: id,
+      }).update({ quantityReceived: line.quantityReceived });
+    }
+
+    if (statusChange) {
+      await tx.orm.public.PurchaseOrder.where({ id }).update({
+        status: statusChange.toStatus,
+      });
+
+      await tx.orm.public.PurchaseOrderStatusChange.create({
+        purchaseOrderId: id,
+        fromStatus: statusChange.fromStatus,
+        toStatus: statusChange.toStatus,
+        changedBy: statusChange.changedBy,
+        reason: statusChange.reason,
+      });
+    }
+
+    return tx.orm.public.PurchaseOrder.where({ id })
+      .include("lines", (line) => line.orderBy((l) => l.productName.asc()))
+      .first();
+  });
+
 const countLines = async (purchaseOrderId: string) =>
   (
     await PurchaseOrderLine.where({ purchaseOrderId }).aggregate((a) => ({
@@ -176,9 +230,21 @@ type StatusChange = {
   approval?: { approvedBy: string; approvedAt: string } | undefined;
 };
 
-// The new status and its history row are written together, so the audit trail can
-// never miss a change, and a failed write leaves the status untouched.
-const changeStatus = async (id: string, change: StatusChange) =>
+// An event to publish once the change is committed. Written in the same transaction as
+// the status change, so the two can never disagree.
+type OutboxEventInput = {
+  eventType: string;
+  aggregateId: string;
+  payload: unknown;
+};
+
+// The new status, its history row and any outbox event are written together, so the
+// audit trail can never miss a change and a failed write leaves the status untouched.
+const changeStatus = async (
+  id: string,
+  change: StatusChange,
+  event?: OutboxEventInput | undefined,
+) =>
   db.transaction(async (tx) => {
     const updated = await tx.orm.public.PurchaseOrder.where({ id }).update({
       status: change.toStatus,
@@ -193,6 +259,14 @@ const changeStatus = async (id: string, change: StatusChange) =>
       reason: change.reason,
     });
 
+    if (event) {
+      await tx.orm.public.OutboxEvent.create({
+        eventType: event.eventType,
+        aggregateId: event.aggregateId,
+        payload: JSON.stringify(event.payload),
+      });
+    }
+
     return updated;
   });
 
@@ -206,7 +280,9 @@ export {
   count,
   countLines,
   findById,
+  findOpen,
   findStatusHistory,
+  recordReceipt,
   findLine,
   findPage,
   findSummaryById,
