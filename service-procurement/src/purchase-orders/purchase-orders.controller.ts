@@ -1,6 +1,9 @@
 import type { Request, Response } from "express";
 import { getCurrentUser } from "../core/current-user";
-import { toPurchaseOrderResponse } from "./purchase-orders.mapper";
+import {
+  toPurchaseOrderResponse,
+  toPurchaseOrderWithOutstanding,
+} from "./purchase-orders.mapper";
 import * as purchaseOrderService from "./purchase-orders.service";
 
 type IdParams = { id: string };
@@ -137,6 +140,46 @@ const cancelPurchaseOrder = async (req: Request<IdParams>, res: Response) => {
   });
 };
 
+const sendPurchaseOrder = async (req: Request<IdParams>, res: Response) => {
+  const purchaseOrder = await purchaseOrderService.sendPurchaseOrder(
+    req.params.id,
+    getCurrentUser(req),
+  );
+
+  res.status(200).json({
+    message: "Purchase order sent to the supplier",
+    data: toPurchaseOrderResponse(purchaseOrder!),
+  });
+};
+
+// Receiving calls this when a delivery arrives, optionally narrowed to one supplier
+const listOpenPurchaseOrders = async (req: Request, res: Response) => {
+  const supplierId =
+    typeof req.query["supplierId"] === "string"
+      ? req.query["supplierId"]
+      : undefined;
+
+  const purchaseOrders =
+    await purchaseOrderService.listOpenPurchaseOrders(supplierId);
+
+  res
+    .status(200)
+    .json({ data: purchaseOrders.map(toPurchaseOrderWithOutstanding) });
+};
+
+const receivePurchaseOrder = async (req: Request<IdParams>, res: Response) => {
+  const purchaseOrder = await purchaseOrderService.receivePurchaseOrder(
+    req.params.id,
+    req.body,
+    getCurrentUser(req),
+  );
+
+  res.status(200).json({
+    message: "Delivery recorded",
+    data: toPurchaseOrderWithOutstanding(purchaseOrder!),
+  });
+};
+
 const getPurchaseOrderHistory = async (
   req: Request<IdParams>,
   res: Response,
@@ -156,9 +199,12 @@ export {
   deletePurchaseOrder,
   getPurchaseOrder,
   getPurchaseOrderHistory,
+  listOpenPurchaseOrders,
   listPurchaseOrders,
+  receivePurchaseOrder,
   rejectPurchaseOrder,
   removePurchaseOrderLine,
+  sendPurchaseOrder,
   submitPurchaseOrder,
   updatePurchaseOrderLine,
 };

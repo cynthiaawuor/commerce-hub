@@ -11,7 +11,15 @@ import {
   isSelfApproval,
   requiredRoleFor,
 } from "./approval-authority";
-import { canTransition } from "./purchase-order-state";
+import { canReceiveGoods, canTransition } from "./purchase-order-state";
+import {
+  PURCHASE_ORDER_APPROVED,
+  type PurchaseOrderApprovedPayload,
+} from "../events/event-types";
+import {
+  ReceiptLineDto,
+  ReceivePurchaseOrderDto,
+} from "./dtos/receive-purchase-order.dto";
 import type { PurchaseOrderStatus } from "./purchase-order-status";
 import { CancelPurchaseOrderDto } from "./dtos/cancel-purchase-order.dto";
 import { RejectPurchaseOrderDto } from "./dtos/reject-purchase-order.dto";
@@ -288,13 +296,46 @@ const approvePurchaseOrder = async (id: string, user: CurrentUser) => {
     );
   }
 
-  return purchaseOrderRepository.changeStatus(id, {
-    fromStatus: purchaseOrder.status,
-    toStatus: "APPROVED",
-    changedBy: user.id,
-    reason: null,
-    approval: { approvedBy: user.id, approvedAt: new Date().toISOString() },
-  });
+  const approvedAt = new Date().toISOString();
+
+  // Receiving needs to know what to expect, Inventory updates its quantity on order,
+  // and Financials records the coming liability. None of them are called directly:
+  // the event goes to the outbox and a worker publishes it.
+  const order = await purchaseOrderRepository.findById(id);
+  const payload: PurchaseOrderApprovedPayload = {
+    purchaseOrderId: purchaseOrder.id,
+    poNumber: purchaseOrder.poNumber,
+    supplierId: order!.supplierId,
+    supplierName: order!.supplierName,
+    paymentTerms: order!.paymentTerms,
+    currency: order!.currency,
+    totalCents: Number(purchaseOrder.totalCents),
+    approvedBy: user.id,
+    approvedAt,
+    lines: order!.lines.map((line) => ({
+      productId: line.productId,
+      productName: line.productName,
+      quantityOrdered: line.quantityOrdered,
+      unitCostCents: line.unitCostCents,
+      leadTimeDays: line.leadTimeDays,
+    })),
+  };
+
+  return purchaseOrderRepository.changeStatus(
+    id,
+    {
+      fromStatus: purchaseOrder.status,
+      toStatus: "APPROVED",
+      changedBy: user.id,
+      reason: null,
+      approval: { approvedBy: user.id, approvedAt },
+    },
+    {
+      eventType: PURCHASE_ORDER_APPROVED,
+      aggregateId: purchaseOrder.id,
+      payload,
+    },
+  );
 };
 
 // Sends the order back to the buyer, who edits it and submits again
@@ -340,6 +381,130 @@ const cancelPurchaseOrder = async (
   });
 };
 
+// The order has been placed with the supplier, so goods can start arriving against it
+const sendPurchaseOrder = async (id: string, user: CurrentUser) => {
+  const purchaseOrder = await assertCanTransition(id, "SENT");
+
+  return purchaseOrderRepository.changeStatus(id, {
+    fromStatus: purchaseOrder.status,
+    toStatus: "SENT",
+    changedBy: user.id,
+    reason: null,
+  });
+};
+
+// What Receiving asks when a truck shows up: which orders can this delivery belong to?
+const listOpenPurchaseOrders = async (supplierId?: string | undefined) =>
+  purchaseOrderRepository.findOpen(supplierId);
+
+// Validates each delivery line on its own, so the caller sees exactly which entry is wrong
+const parseReceiptLines = async (lines: unknown[]) => {
+  const parsedLines: ReceiptLineDto[] = [];
+  const errors: Record<string, string[]> = {};
+
+  for (const [index, line] of lines.entries()) {
+    const parsed = await parseAndValidate(ReceiptLineDto, line);
+
+    if (parsed.errors) {
+      for (const [field, messages] of Object.entries(parsed.errors)) {
+        errors[`lines[${index}].${field}`] = messages;
+      }
+      continue;
+    }
+
+    parsedLines.push(parsed.obj!);
+  }
+
+  if (Object.keys(errors).length > 0) {
+    throw new BadRequestError("Unprocessable delivery lines", errors);
+  }
+
+  return parsedLines;
+};
+
+// Books a delivery against the order: quantities go up, and the order becomes
+// PARTIALLY_RECEIVED or CLOSED depending on what is still outstanding.
+const receivePurchaseOrder = async (
+  id: string,
+  body: unknown,
+  user: CurrentUser,
+) => {
+  const { obj, errors } = await parseAndValidate(ReceivePurchaseOrderDto, body);
+
+  if (errors) {
+    throw new BadRequestError("Unprocessable delivery", errors);
+  }
+
+  const receiptLines = await parseReceiptLines(obj!.lines);
+
+  const purchaseOrder = await purchaseOrderRepository.findById(id);
+
+  if (!purchaseOrder) {
+    throw new NotFoundError(`Purchase order with ID ${id} not found`);
+  }
+
+  if (!canReceiveGoods(purchaseOrder.status)) {
+    throw new ConflictError(
+      `Purchase order ${purchaseOrder.poNumber} is ${purchaseOrder.status}; goods can only be received against an order that was sent to the supplier`,
+    );
+  }
+
+  // New totals per line, so the same product listed twice in one delivery adds up
+  const receivedByLineId = new Map<string, number>();
+
+  for (const receiptLine of receiptLines) {
+    const line = purchaseOrder.lines.find(
+      (candidate) => candidate.productId === receiptLine.productId,
+    );
+
+    if (!line) {
+      throw new BadRequestError(
+        `Product ${receiptLine.productId} is not on purchase order ${purchaseOrder.poNumber}`,
+      );
+    }
+
+    const alreadyCounted = receivedByLineId.get(line.id) ?? line.quantityReceived;
+    const newTotal = alreadyCounted + receiptLine.quantityReceived;
+
+    // Overages are Receiving's business to resolve with the supplier; the order only
+    // ever records up to what was ordered.
+    if (newTotal > line.quantityOrdered) {
+      throw new ConflictError(
+        `Receiving ${receiptLine.quantityReceived} of ${receiptLine.productId} would exceed the ${line.quantityOrdered} ordered (${line.quantityReceived} already received)`,
+      );
+    }
+
+    receivedByLineId.set(line.id, newTotal);
+  }
+
+  const received = [...receivedByLineId].map(([lineId, quantityReceived]) => ({
+    lineId,
+    quantityReceived,
+  }));
+
+  const fullyReceived = purchaseOrder.lines.every((line) => {
+    const quantityReceived =
+      receivedByLineId.get(line.id) ?? line.quantityReceived;
+    return quantityReceived >= line.quantityOrdered;
+  });
+
+  const toStatus = fullyReceived ? "CLOSED" : "PARTIALLY_RECEIVED";
+
+  return purchaseOrderRepository.recordReceipt(
+    id,
+    received,
+    // Only record a status change when the status actually moves
+    toStatus === purchaseOrder.status
+      ? null
+      : {
+          fromStatus: purchaseOrder.status,
+          toStatus,
+          changedBy: user.id,
+          reason: obj!.reference ? `Delivery ${obj!.reference}` : null,
+        },
+  );
+};
+
 const getPurchaseOrderHistory = async (id: string) => {
   if (!(await purchaseOrderRepository.findSummaryById(id))) {
     throw new NotFoundError(`Purchase order with ID ${id} not found`);
@@ -356,9 +521,12 @@ export {
   deletePurchaseOrder,
   getPurchaseOrder,
   getPurchaseOrderHistory,
+  listOpenPurchaseOrders,
   listPurchaseOrders,
+  receivePurchaseOrder,
   rejectPurchaseOrder,
   removePurchaseOrderLine,
+  sendPurchaseOrder,
   submitPurchaseOrder,
   updatePurchaseOrderLine,
 };

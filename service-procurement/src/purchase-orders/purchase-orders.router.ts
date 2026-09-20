@@ -5,6 +5,9 @@ const purchaseOrdersRouter: Router = Router();
 
 purchaseOrdersRouter.get("/", purchaseOrderController.listPurchaseOrders);
 purchaseOrdersRouter.post("/", purchaseOrderController.createPurchaseOrder);
+// Must come before "/:id", or Express would read "open" as an order id
+purchaseOrdersRouter.get("/open", purchaseOrderController.listOpenPurchaseOrders);
+
 purchaseOrdersRouter.get("/:id", purchaseOrderController.getPurchaseOrder);
 purchaseOrdersRouter.delete("/:id", purchaseOrderController.deletePurchaseOrder);
 
@@ -38,6 +41,14 @@ purchaseOrdersRouter.post(
 purchaseOrdersRouter.post(
   "/:id/cancel",
   purchaseOrderController.cancelPurchaseOrder,
+);
+purchaseOrdersRouter.post(
+  "/:id/send",
+  purchaseOrderController.sendPurchaseOrder,
+);
+purchaseOrdersRouter.post(
+  "/:id/receipts",
+  purchaseOrderController.receivePurchaseOrder,
 );
 purchaseOrdersRouter.get(
   "/:id/history",
