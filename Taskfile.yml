@@ -9,6 +9,7 @@ output: prefixed
 vars:
   # Each service owns a private database, so there is one container per service
   POSTGRES_CONTAINERS: commerce_postgres procurement_postgres
+  RABBITMQ_CONTAINER: commerce_rabbitmq
 
 tasks:
   default:
@@ -18,8 +19,8 @@ tasks:
     silent: true
 
   dev:
-    desc: Start both databases, the vendor API, the procurement API and the portal (watch mode)
-    deps: [db:up]
+    desc: Start the databases and broker, then the vendor API, procurement API and portal (watch mode)
+    deps: [infra:up]
     cmds:
       - task: dev:apps
 
@@ -52,13 +53,13 @@ tasks:
     cmds:
       - npm run dev
 
-  db:up:
-    desc: Start every Postgres container and wait until they accept connections
-    prefix: db
+  infra:up:
+    desc: Start Postgres and RabbitMQ, and wait until they accept connections
+    prefix: infra
     cmds:
       - docker compose up -d
-      # compose reports a container as started before Postgres finishes booting,
-      # so a service would fail its first query without this wait
+      # compose reports a container as started before the service inside finishes booting,
+      # so a service would fail its first query or publish without this wait
       - |
         for container in {{.POSTGRES_CONTAINERS}}; do
           ready=false
@@ -75,13 +76,26 @@ tasks:
             exit 1
           fi
         done
+      # RabbitMQ takes longer to boot than Postgres. Check as the rabbitmq user: running
+      # rabbitmq-diagnostics as root creates a root-owned .erlang.cookie that the server
+      # itself then cannot read.
+      - |
+        for i in $(seq 1 60); do
+          if docker exec -u rabbitmq {{.RABBITMQ_CONTAINER}} rabbitmq-diagnostics -q ping >/dev/null 2>&1; then
+            echo "{{.RABBITMQ_CONTAINER}} is ready"
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "{{.RABBITMQ_CONTAINER}} did not become ready in 120s" >&2
+        exit 1
 
-  db:down:
-    desc: Stop every Postgres container
+  infra:down:
+    desc: Stop every container
     cmds:
       - docker compose down
 
-  db:logs:
-    desc: Follow the Postgres logs
+  infra:logs:
+    desc: Follow the container logs
     cmds:
       - docker compose logs -f
