@@ -2,6 +2,7 @@ import "dotenv/config";
 import type { Request, Response } from "express";
 import express from "express";
 import { errorHandler, notFoundHandler } from "./core/error-handler";
+import { startOutboxWorker, stopOutboxWorker } from "./events/outbox-worker";
 import purchaseOrdersRouter from "./purchase-orders/purchase-orders.router";
 
 const app = express();
@@ -20,6 +21,16 @@ app.use("/procurement-api/purchase-orders", purchaseOrdersRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Procurement service is running at http://localhost:${PORT}`);
+  startOutboxWorker();
 });
+
+// Close the broker connection cleanly so in-flight publishes are not cut off
+const shutdown = async () => {
+  await stopOutboxWorker();
+  server.close(() => process.exit(0));
+};
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
