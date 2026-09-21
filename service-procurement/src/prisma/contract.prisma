@@ -114,3 +114,42 @@ model OutboxEvent {
 
     @@index([publishedAt, createdAt])
 }
+
+// Inventory reports that a product is low; a buyer decides what to do about it.
+enum ReorderSuggestionStatus {
+    OPEN      = "OPEN"
+    DISMISSED = "DISMISSED"
+    CONVERTED = "CONVERTED"
+
+    @@type("pg/text@1")
+}
+
+// Raised from a StockLow event (see contracts/events/stock-low.md). One row per product
+// and location: a repeat report updates this row instead of adding another.
+model ReorderSuggestion {
+    id String @id @default(uuid())
+
+    productId   String
+    productName String
+    locationId  String
+
+    quantityAvailable Int
+    reorderPoint      Int
+    suggestedQuantity Int
+
+    status ReorderSuggestionStatus @default(OPEN)
+
+    // Set when a buyer turns the suggestion into a draft order
+    purchaseOrderId String?
+    // Set when a buyer decides not to order
+    dismissedBy     String?
+    dismissReason   String?
+
+    // When Inventory last reported this product as low
+    lastReportedAt TimestamptzString @default(now())
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    @@unique([productId, locationId])
+}
