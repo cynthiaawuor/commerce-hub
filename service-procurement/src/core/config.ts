@@ -8,4 +8,7 @@ export const config = {
   rabbitmqUrl: process.env["RABBITMQ_URL"] ?? "amqp://guest:guest@localhost:5672",
   // How often the outbox worker looks for events waiting to be published
   outboxPollMs: Number(process.env["OUTBOX_POLL_MS"] ?? 2000),
+  // Phase flag for this module. Anything other than "false" leaves it on, so a missing
+  // variable in development does not silently disable the service.
+  featureProcurement: process.env["FEATURE_PROCUREMENT"] !== "false",
 };
