@@ -90,29 +90,41 @@ model PurchaseOrderStatusChange {
 }
 
 // ------------------------------------------------------
-// Transactional outbox. An event is written in the same transaction as the change that
-// caused it, so the two can never disagree: no event for a failed approval, and no
-// approval whose event was lost because the broker was down. A worker publishes the
-// rows afterwards and stamps publishedAt.
+// PENDING: waiting to be published (or waiting for its next retry)
+// PUBLISHED: RabbitMQ has confirmed it
+// DEAD: given up on; kept for inspection and manual retry, never silently deleted
 // ------------------------------------------------------
+enum OutboxEventStatus {
+    PENDING   = "PENDING"
+    PUBLISHED = "PUBLISHED"
+    DEAD      = "DEAD"
+
+    @@type("pg/text@1")
+}
+
 model OutboxEvent {
     id String @id @default(uuid())
 
     // e.g. "PurchaseOrderApproved"
-    eventType String
+    eventType   String
     // The purchase order the event is about
     aggregateId String
     // The event body, as JSON text
-    payload String
+    payload     String
 
+    status      OutboxEventStatus  @default(PENDING)
     publishedAt TimestamptzString?
-    // Raised on every failed publish, so a poisoned message can be spotted
-    attempts    Int                @default(0)
-    lastError   String?
+
+    // Failures that were this event's fault; broker outages are not counted
+    attempts      Int                @default(0)
+    lastError     String?
+    // Not picked up again before this time, so a failing event backs off
+    nextAttemptAt TimestamptzString  @default(now())
+    deadAt        TimestamptzString?
 
     createdAt TimestamptzString @default(now())
 
-    @@index([publishedAt, createdAt])
+    @@index([status, nextAttemptAt])
 }
 
 // Inventory reports that a product is low; a buyer decides what to do about it.
