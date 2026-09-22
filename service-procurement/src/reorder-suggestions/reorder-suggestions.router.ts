@@ -1,5 +1,5 @@
 import { Router } from "express";
-import * as reorderSuggestionController from "./reorder-suggestions.controller";
+import * as reorderSuggestionController from "../reorder-suggestions/controller/reorder-suggestions.controller";
 
 const reorderSuggestionsRouter: Router = Router();
 

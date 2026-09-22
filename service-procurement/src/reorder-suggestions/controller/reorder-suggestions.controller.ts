@@ -1,11 +1,11 @@
 import type { Request, Response } from "express";
-import { getCurrentUser } from "../core/current-user";
-import { toPurchaseOrderResponse } from "../purchase-orders/purchase-orders.mapper";
+import * as reorderSuggestionService from "../reorder-suggestions.service";
 import {
   REORDER_SUGGESTION_STATUSES,
   type ReorderSuggestionStatus,
-} from "./reorder-suggestion-status";
-import * as reorderSuggestionService from "./reorder-suggestions.service";
+} from "../reorder-suggestion-status";
+import { getCurrentUser } from "../../core/current-user";
+import { toPurchaseOrderResponse } from "../../purchase-orders/purchase-orders.mapper";
 
 type IdParams = { id: string };
 
@@ -14,7 +14,9 @@ const isStatus = (value: unknown): value is ReorderSuggestionStatus =>
   (REORDER_SUGGESTION_STATUSES as readonly string[]).includes(value);
 
 const listSuggestions = async (req: Request, res: Response) => {
-  const status = isStatus(req.query["status"]) ? req.query["status"] : undefined;
+  const status = isStatus(req.query["status"])
+    ? req.query["status"]
+    : undefined;
 
   res
     .status(200)

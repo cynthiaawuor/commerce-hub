@@ -1,6 +1,7 @@
 import type { EventEnvelope } from "./event-publisher";
 import { subscribe } from "./event-consumer";
 import * as reorderSuggestionService from "../reorder-suggestions/reorder-suggestions.service";
+import { PermanentEventError } from "./outbox-errors";
 
 // The shape Inventory publishes; see contracts/events/stock-low.md
 type StockLowPayload = {
@@ -15,8 +16,35 @@ type StockLowPayload = {
 const QUEUE = "procurement.stock-low";
 const ROUTING_KEY = "inventory.stock-low";
 
+const isText = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
+const isCount = (value: unknown): value is number =>
+  Number.isInteger(value) && (value as number) >= 0;
+
+// A payload missing fields will be missing them on every retry
+const parseStockLowPayload = (payload: unknown): StockLowPayload => {
+  const p = payload as Partial<StockLowPayload> | null;
+
+  if (
+    !p ||
+    !isText(p.productId) ||
+    !isText(p.productName) ||
+    !isText(p.locationId) ||
+    !isCount(p.quantityAvailable) ||
+    !isCount(p.reorderPoint) ||
+    !isCount(p.reorderQuantity)
+  ) {
+    throw new PermanentEventError(
+      "StockLow payload does not match contracts/events/stock-low.md",
+    );
+  }
+
+  return p as StockLowPayload;
+};
+
 const handleStockLow = async (envelope: EventEnvelope) => {
-  const payload = envelope.payload as StockLowPayload;
+  const payload = parseStockLowPayload(envelope.payload);
 
   await reorderSuggestionService.recordShortage({
     productId: payload.productId,

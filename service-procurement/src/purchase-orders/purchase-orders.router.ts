@@ -1,15 +1,21 @@
 import { Router } from "express";
-import * as purchaseOrderController from "./purchase-orders.controller";
+import * as purchaseOrderController from "./controllers/purchase-orders.controller";
 
 const purchaseOrdersRouter: Router = Router();
 
 purchaseOrdersRouter.get("/", purchaseOrderController.listPurchaseOrders);
 purchaseOrdersRouter.post("/", purchaseOrderController.createPurchaseOrder);
 // Must come before "/:id", or Express would read "open" as an order id
-purchaseOrdersRouter.get("/open", purchaseOrderController.listOpenPurchaseOrders);
+purchaseOrdersRouter.get(
+  "/open",
+  purchaseOrderController.listOpenPurchaseOrders,
+);
 
 purchaseOrdersRouter.get("/:id", purchaseOrderController.getPurchaseOrder);
-purchaseOrdersRouter.delete("/:id", purchaseOrderController.deletePurchaseOrder);
+purchaseOrdersRouter.delete(
+  "/:id",
+  purchaseOrderController.deletePurchaseOrder,
+);
 
 purchaseOrdersRouter.post(
   "/:id/lines",

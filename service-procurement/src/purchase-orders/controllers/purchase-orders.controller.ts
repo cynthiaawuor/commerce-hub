@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
-import { getCurrentUser } from "../core/current-user";
+import * as purchaseOrderService from "../purchase-orders.service";
+import { getCurrentUser } from "../../core/current-user";
 import {
   toPurchaseOrderResponse,
   toPurchaseOrderWithOutstanding,
-} from "./purchase-orders.mapper";
-import * as purchaseOrderService from "./purchase-orders.service";
+} from "../purchase-orders.mapper";
 
 type IdParams = { id: string };
 type LineParams = { id: string; lineId: string };
