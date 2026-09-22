@@ -5,12 +5,14 @@ import { mountDocs } from "./core/docs";
 import { errorHandler, notFoundHandler } from "./core/error-handler";
 import purchaseOrdersRouter from "./purchase-orders/purchase-orders.router";
 import reorderSuggestionsRouter from "./reorder-suggestions/reorder-suggestions.router";
+import outboxRouter from "./events/outbox.router";
 
 // Built separately from the server so tests can drive the app without opening a port.
 const createApp = () => {
   const app = express();
 
   app.use(express.json());
+  app.use("/procurement-api/outbox", outboxRouter);
 
   // Lets compose, CI and other services check the service is up, without touching the database
   app.get("/procurement-api/health", (_req: Request, res: Response) => {
