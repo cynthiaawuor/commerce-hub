@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  service-vendor:
+    name: Vendor service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: service-vendor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: service-vendor/package-lock.json
+      - run: npm ci
+      - name: Type-check
+        run: npx tsc --noEmit
+
+  service-procurement:
+    name: Procurement service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: service-procurement
+    services:
+      # Integration tests need a real database; the workflow creates its own test
+      # database inside this instance.
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: service-procurement
+        ports: ['5435:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5435/service-procurement-test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5435/service-procurement
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: service-procurement/package-lock.json
+      - run: npm ci
+      - name: Type-check
+        run: npx tsc --noEmit
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Integration tests
+        run: npm run test:integration
+
+  vendor-portal:
+    name: Vendor portal
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vendor-portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vendor-portal/package-lock.json
+      - run: npm ci
+      - name: Build
+        run: npm run build

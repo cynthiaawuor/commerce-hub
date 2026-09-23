@@ -1,0 +1,109 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+# Label each line of output with the task it came from, so the dev servers
+# running side by side stay readable.
+output: prefixed
+
+vars:
+  # Each service owns a private database, so there is one container per service
+  POSTGRES_CONTAINERS: commerce_postgres procurement_postgres
+  RABBITMQ_CONTAINER: commerce_rabbitmq
+
+tasks:
+  default:
+    desc: List the available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  dev:
+    desc: Start the databases and broker, then the vendor API, procurement API and portal (watch mode)
+    deps: [infra:up]
+    cmds:
+      - task: dev:apps
+
+  dev:apps:
+    internal: true
+    # deps run at the same time, so every server stays in the foreground until Ctrl+C
+    deps: [dev:vendor, dev:procurement, dev:portal, dev:dashboard]
+
+  dev:vendor:
+    desc: Run service-vendor in watch mode (http://localhost:3000)
+    dir: service-vendor
+    prefix: vendor
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:procurement:
+    desc: Run service-procurement in watch mode (http://localhost:3001)
+    dir: service-procurement
+    prefix: procurement
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:portal:
+    desc: Run vendor-portal in watch mode (http://localhost:5173)
+    dir: vendor-portal
+    prefix: portal
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:dashboard:
+    desc: Run procurement-dashboard in watch mode (http://localhost:5174)
+    dir: procurement-dashboard
+    prefix: dashboard
+    interactive: true
+    cmds:
+      - npm run dev
+
+  infra:up:
+    desc: Start Postgres and RabbitMQ, and wait until they accept connections
+    prefix: infra
+    cmds:
+      - docker compose up -d
+      # compose reports a container as started before the service inside finishes booting,
+      # so a service would fail its first query or publish without this wait
+      - |
+        for container in {{.POSTGRES_CONTAINERS}}; do
+          ready=false
+          for i in $(seq 1 30); do
+            if docker exec "$container" pg_isready -U postgres >/dev/null 2>&1; then
+              echo "$container is ready"
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" = false ]; then
+            echo "$container did not become ready in 30s" >&2
+            exit 1
+          fi
+        done
+      # RabbitMQ takes longer to boot than Postgres. Check as the rabbitmq user: running
+      # rabbitmq-diagnostics as root creates a root-owned .erlang.cookie that the server
+      # itself then cannot read.
+      - |
+        for i in $(seq 1 60); do
+          if docker exec -u rabbitmq {{.RABBITMQ_CONTAINER}} rabbitmq-diagnostics -q ping >/dev/null 2>&1; then
+            echo "{{.RABBITMQ_CONTAINER}} is ready"
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "{{.RABBITMQ_CONTAINER}} did not become ready in 120s" >&2
+        exit 1
+
+  infra:down:
+    desc: Stop every container
+    cmds:
+      - docker compose down
+
+  infra:logs:
+    desc: Follow the container logs
+    cmds:
+      - docker compose logs -f

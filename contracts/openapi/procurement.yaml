@@ -1,0 +1,504 @@
+openapi: 3.1.0
+info:
+  title: Procurement Service
+  version: 1.0.0
+  description: |
+    Purchase orders: what the business commits to buy, from whom, at what price, and who
+    approved it.
+
+    Money is always **integer cents** (KES 1,250.50 is `125050`). Prices and supplier terms
+    are read from Vendor Management and frozen onto the order when it is created.
+
+    There is no auth service yet: the caller identifies itself with `x-user-id` and
+    `x-user-role` headers.
+servers:
+  - url: http://localhost:3001/procurement-api
+    description: Local development
+
+tags:
+  - name: Purchase orders
+  - name: Reorder suggestions
+  - name: Health
+
+components:
+  parameters:
+    UserId:
+      name: x-user-id
+      in: header
+      required: true
+      schema: { type: string }
+      description: Who is making the request (stands in for authentication)
+    UserRole:
+      name: x-user-role
+      in: header
+      required: false
+      schema: { type: string, enum: [BUYER, MANAGER], default: BUYER }
+      description: Decides what the caller may approve
+    OrderId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message: { type: string }
+            details:
+              type: object
+              additionalProperties:
+                type: array
+                items: { type: string }
+    PurchaseOrderLine:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string }
+        catalogItemId: { type: string }
+        productName: { type: string }
+        quantityOrdered: { type: integer }
+        quantityReceived: { type: integer }
+        quantityOutstanding:
+          type: integer
+          description: Only on the open-orders and delivery responses
+        unitCostCents:
+          type: integer
+          description: Locked from the supplier's catalog when the line was added
+        leadTimeDays: { type: integer }
+    PurchaseOrder:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        poNumber: { type: string, example: PO-000123 }
+        supplierId: { type: string }
+        supplierName:
+          type: string
+          description: Copied from Vendor Management when the order was created
+        paymentTerms: { type: string, example: NET_30 }
+        status:
+          type: string
+          enum: [DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, SENT, PARTIALLY_RECEIVED, CLOSED, CANCELLED]
+        currency: { type: string, default: KES }
+        totalCents:
+          type: integer
+          description: Sum of quantityOrdered x unitCostCents across the lines
+        notes: { type: string, nullable: true }
+        createdBy: { type: string }
+        approvedBy: { type: string, nullable: true }
+        approvedAt: { type: string, nullable: true }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+        lines:
+          type: array
+          items: { $ref: '#/components/schemas/PurchaseOrderLine' }
+    StatusChange:
+      type: object
+      properties:
+        fromStatus: { type: string, nullable: true }
+        toStatus: { type: string }
+        changedBy: { type: string }
+        reason: { type: string, nullable: true }
+        createdAt: { type: string }
+    ReorderSuggestion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string }
+        productName: { type: string }
+        locationId: { type: string }
+        quantityAvailable: { type: integer }
+        reorderPoint: { type: integer }
+        suggestedQuantity: { type: integer }
+        status: { type: string, enum: [OPEN, DISMISSED, CONVERTED] }
+        purchaseOrderId: { type: string, nullable: true }
+        lastReportedAt: { type: string }
+
+  responses:
+    BadRequest:
+      description: The request body or query is not valid
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: The caller may not approve this order
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: No such record
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: The order's status does not allow this
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Is the service up?
+      responses:
+        '200':
+          description: Service status and whether the module's feature flag is on
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  service: { type: string }
+                  enabled: { type: boolean }
+
+  /purchase-orders:
+    get:
+      tags: [Purchase orders]
+      summary: List purchase orders
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: supplierId, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: A page of orders, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/PurchaseOrder' }
+                  meta:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      limit: { type: integer }
+                      total: { type: integer }
+                      totalPages: { type: integer }
+    post:
+      tags: [Purchase orders]
+      summary: Create a draft purchase order
+      description: |
+        The supplier is looked up in Vendor Management; its name and payment terms are
+        copied onto the order so later changes there cannot alter an existing order.
+      parameters:
+        - { $ref: '#/components/parameters/UserId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [supplierId]
+              properties:
+                supplierId: { type: string }
+                notes: { type: string, maxLength: 1000 }
+      responses:
+        '201':
+          description: The draft order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/PurchaseOrder' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409':
+          description: The supplier is not active
+
+  /purchase-orders/open:
+    get:
+      tags: [Purchase orders]
+      summary: Orders a delivery can be booked against
+      description: Used by Receiving when a truck arrives. Returns SENT and PARTIALLY_RECEIVED orders.
+      parameters:
+        - { name: supplierId, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Open orders, with the outstanding quantity on each line
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/PurchaseOrder' }
+
+  /purchase-orders/{id}:
+    get:
+      tags: [Purchase orders]
+      summary: One purchase order with its lines
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+      responses:
+        '200':
+          description: The order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/PurchaseOrder' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Purchase orders]
+      summary: Delete a draft
+      description: Only drafts can be deleted. An order that has been through approval is cancelled instead.
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+      responses:
+        '200': { description: Deleted }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /purchase-orders/{id}/lines:
+    post:
+      tags: [Purchase orders]
+      summary: Add a line to a draft
+      description: |
+        The buyer chooses the product and quantity. Price, lead time, product name and the
+        catalog item are read from Vendor Management and locked onto the line.
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+        - { $ref: '#/components/parameters/UserId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId, quantityOrdered]
+              properties:
+                productId: { type: string }
+                quantityOrdered: { type: integer, minimum: 1 }
+      responses:
+        '201':
+          description: The line, with the locked price
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409':
+          description: The order is not a draft, or the product is already on it
+
+  /purchase-orders/{id}/lines/{lineId}:
+    patch:
+      tags: [Purchase orders]
+      summary: Change a line's quantity
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantityOrdered]
+              properties:
+                quantityOrdered: { type: integer, minimum: 1 }
+      responses:
+        '200': { description: The updated line }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [Purchase orders]
+      summary: Remove a line from a draft
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Removed }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /purchase-orders/{id}/submit:
+    post:
+      tags: [Purchase orders]
+      summary: Submit for approval
+      description: 'Refused when the order has no lines: there would be nothing to approve.'
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+        - { $ref: '#/components/parameters/UserId' }
+      responses:
+        '200': { description: Now PENDING_APPROVAL }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /purchase-orders/{id}/approve:
+    post:
+      tags: [Purchase orders]
+      summary: Approve an order
+      description: |
+        Two rules apply: the buyer who raised the order may not approve it, and orders above
+        KES 100,000 (10,000,000 cents) need a MANAGER. Publishes `PurchaseOrderApproved`.
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+        - { $ref: '#/components/parameters/UserId' }
+        - { $ref: '#/components/parameters/UserRole' }
+      responses:
+        '200': { description: 'Approved, with approvedBy and approvedAt set' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /purchase-orders/{id}/reject:
+    post:
+      tags: [Purchase orders]
+      summary: Reject an order
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+        - { $ref: '#/components/parameters/UserId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200': { description: Rejected and returned to the buyer }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /purchase-orders/{id}/cancel:
+    post:
+      tags: [Purchase orders]
+      summary: Cancel an order
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+        - { $ref: '#/components/parameters/UserId' }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200': { description: Cancelled }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /purchase-orders/{id}/send:
+    post:
+      tags: [Purchase orders]
+      summary: Mark an approved order as sent to the supplier
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+        - { $ref: '#/components/parameters/UserId' }
+      responses:
+        '200': { description: 'Now SENT, and goods can be received against it' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /purchase-orders/{id}/receipts:
+    post:
+      tags: [Purchase orders]
+      summary: Record a delivery
+      description: |
+        Raises the received quantities and moves the order to PARTIALLY_RECEIVED or CLOSED.
+        Receiving more than was ordered is refused.
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+        - { $ref: '#/components/parameters/UserId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lines]
+              properties:
+                reference: { type: string, description: The GRN number }
+                lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [productId, quantityReceived]
+                    properties:
+                      productId: { type: string }
+                      quantityReceived: { type: integer, minimum: 1 }
+      responses:
+        '200': { description: The order with updated quantities }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /purchase-orders/{id}/history:
+    get:
+      tags: [Purchase orders]
+      summary: The order's audit trail
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+      responses:
+        '200':
+          description: Every status change, oldest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/StatusChange' }
+
+  /reorder-suggestions:
+    get:
+      tags: [Reorder suggestions]
+      summary: List reorder suggestions
+      description: Raised from `StockLow` events published by Inventory.
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [OPEN, DISMISSED, CONVERTED] } }
+      responses:
+        '200':
+          description: Suggestions, most recently reported first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ReorderSuggestion' }
+
+  /reorder-suggestions/{id}/dismiss:
+    post:
+      tags: [Reorder suggestions]
+      summary: Dismiss a suggestion
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+        - { $ref: '#/components/parameters/UserId' }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200': { description: Dismissed }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /reorder-suggestions/{id}/convert:
+    post:
+      tags: [Reorder suggestions]
+      summary: Raise a draft order from a suggestion
+      description: |
+        Picks the cheapest active supplier approved for the product and creates a **draft**
+        order for the suggested quantity. It still goes through submit and approval.
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+        - { $ref: '#/components/parameters/UserId' }
+      responses:
+        '201':
+          description: The draft order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/PurchaseOrder' }
+        '409':
+          description: Already acted on, or no active supplier provides the product

@@ -1,0 +1,167 @@
+// ------------------------------------------------------
+// Money is always stored as integer cents (KES 1,250.50 → 125050), never as floats.
+// supplierId, catalogItemId and productId are soft references to other services:
+// there are no foreign keys, because those tables live in other databases.
+// ------------------------------------------------------
+
+// Lifecycle of a purchase order. The database rejects any value not listed here.
+enum PurchaseOrderStatus {
+    DRAFT              = "DRAFT"
+    PENDING_APPROVAL   = "PENDING_APPROVAL"
+    APPROVED           = "APPROVED"
+    REJECTED           = "REJECTED"
+    SENT               = "SENT"
+    PARTIALLY_RECEIVED = "PARTIALLY_RECEIVED"
+    CLOSED             = "CLOSED"
+    CANCELLED          = "CANCELLED"
+
+    @@type("pg/text@1")
+}
+
+model PurchaseOrder {
+    id       String @id @default(uuid())
+    // Human-friendly reference buyers and suppliers quote, e.g. PO-000123
+    poNumber String @unique
+
+    // Supplier details copied from service-vendor when the PO is created,
+    // so the order keeps the terms it was agreed under even if the supplier record changes later
+    supplierId   String
+    supplierName String
+    paymentTerms String
+
+    status     PurchaseOrderStatus @default(DRAFT)
+    currency   String              @default("KES")
+    // Sum of quantityOrdered × unitCostCents over the lines; decides who may approve
+    totalCents BigInt              @default(0)
+    notes      String?
+
+    createdBy  String
+    approvedBy String?
+    approvedAt TimestamptzString?
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    lines         PurchaseOrderLine[]
+    statusChanges PurchaseOrderStatusChange[]
+}
+
+model PurchaseOrderLine {
+    id              String @id @default(uuid())
+    purchaseOrderId String
+
+    productId     String
+    catalogItemId String
+    // Copied from the vendor catalog when the line is added
+    productName   String
+
+    quantityOrdered  Int
+    // Filled in as goods arrive; remaining = quantityOrdered - quantityReceived
+    quantityReceived Int @default(0)
+
+    // Locked when the line is added, so later price changes in service-vendor don't affect this order
+    unitCostCents Int
+    leadTimeDays  Int
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+    // One line per product; ordering more of it means raising the quantity
+    @@unique([purchaseOrderId, productId])
+}
+
+// Audit trail: every status change, who made it and why
+model PurchaseOrderStatusChange {
+    id              String @id @default(uuid())
+    purchaseOrderId String
+
+    // null for the first entry, when the PO is created
+    fromStatus PurchaseOrderStatus?
+    toStatus   PurchaseOrderStatus
+    changedBy  String
+    // Required by the service when rejecting or cancelling
+    reason     String?
+
+    createdAt TimestamptzString @default(now())
+
+    purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+}
+
+// ------------------------------------------------------
+// PENDING: waiting to be published (or waiting for its next retry)
+// PUBLISHED: RabbitMQ has confirmed it
+// DEAD: given up on; kept for inspection and manual retry, never silently deleted
+// ------------------------------------------------------
+enum OutboxEventStatus {
+    PENDING   = "PENDING"
+    PUBLISHED = "PUBLISHED"
+    DEAD      = "DEAD"
+
+    @@type("pg/text@1")
+}
+
+model OutboxEvent {
+    id String @id @default(uuid())
+
+    // e.g. "PurchaseOrderApproved"
+    eventType   String
+    // The purchase order the event is about
+    aggregateId String
+    // The event body, as JSON text
+    payload     String
+
+    status      OutboxEventStatus  @default(PENDING)
+    publishedAt TimestamptzString?
+
+    // Failures that were this event's fault; broker outages are not counted
+    attempts      Int                @default(0)
+    lastError     String?
+    // Not picked up again before this time, so a failing event backs off
+    nextAttemptAt TimestamptzString  @default(now())
+    deadAt        TimestamptzString?
+
+    createdAt TimestamptzString @default(now())
+
+    @@index([status, nextAttemptAt])
+}
+
+// Inventory reports that a product is low; a buyer decides what to do about it.
+enum ReorderSuggestionStatus {
+    OPEN      = "OPEN"
+    DISMISSED = "DISMISSED"
+    CONVERTED = "CONVERTED"
+
+    @@type("pg/text@1")
+}
+
+// Raised from a StockLow event (see contracts/events/stock-low.md). One row per product
+// and location: a repeat report updates this row instead of adding another.
+model ReorderSuggestion {
+    id String @id @default(uuid())
+
+    productId   String
+    productName String
+    locationId  String
+
+    quantityAvailable Int
+    reorderPoint      Int
+    suggestedQuantity Int
+
+    status ReorderSuggestionStatus @default(OPEN)
+
+    // Set when a buyer turns the suggestion into a draft order
+    purchaseOrderId String?
+    // Set when a buyer decides not to order
+    dismissedBy     String?
+    dismissReason   String?
+
+    // When Inventory last reported this product as low
+    lastReportedAt TimestamptzString @default(now())
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    @@unique([productId, locationId])
+}
