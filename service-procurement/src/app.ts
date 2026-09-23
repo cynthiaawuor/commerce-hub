@@ -33,7 +33,6 @@ const createApp = () => {
     app.use("/procurement-api/reorder-suggestions", reorderSuggestionsRouter);
   }
 
-  // Must be registered after every route
   app.use(notFoundHandler);
   app.use(errorHandler);
 
