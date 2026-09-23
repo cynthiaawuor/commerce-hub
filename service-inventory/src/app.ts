@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import express from "express";
 import { config } from "./core/config";
 import { errorHandler, notFoundHandler } from "./core/error-handler";
+import locationsRouter from "./locations/locations.router";
+import productsRouter from "./products/products.router";
 
 // Built separately from the server so tests can drive the app without opening a port.
 const createApp = () => {
@@ -21,7 +23,8 @@ const createApp = () => {
   // The whole module sits behind its phase flag: with the flag off the service still
   // runs and answers health checks, but exposes none of its routes.
   if (config.featureInventory) {
-    //TODO
+    app.use("/inventory-api/products", productsRouter);
+    app.use("/inventory-api/locations", locationsRouter);
   }
 
   // Must be registered after every route
