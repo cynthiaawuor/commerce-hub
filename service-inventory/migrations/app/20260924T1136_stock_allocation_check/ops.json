@@ -1,0 +1,44 @@
+[
+  {
+    "id": "checkConstraint.stockLevel.stock_level_allocated_within_on_hand_46d1460c",
+    "label": "Add check constraint \"stock_level_allocated_within_on_hand_46d1460c\" on \"stockLevel\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "stock_level_allocated_within_on_hand_46d1460c",
+        "table": "stockLevel"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"stock_level_allocated_within_on_hand_46d1460c\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "stock_level_allocated_within_on_hand_46d1460c",
+          "public",
+          "\"public\".\"stockLevel\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"stock_level_allocated_within_on_hand_46d1460c\"",
+        "sql": "ALTER TABLE \"public\".\"stockLevel\" ADD CONSTRAINT \"stock_level_allocated_within_on_hand_46d1460c\" CHECK (\"allocated\" >= 0 AND \"allocated\" <= \"onHand\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"stock_level_allocated_within_on_hand_46d1460c\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "stock_level_allocated_within_on_hand_46d1460c",
+          "public",
+          "\"public\".\"stockLevel\""
+        ]
+      }
+    ]
+  }
+]

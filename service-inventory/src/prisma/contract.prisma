@@ -78,6 +78,9 @@ model StockLevel {
     location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
     @@unique([productId, locationId])
+    // The database's own guarantee that stock is never oversold: two tills racing for
+    // the last unit cannot both win, whatever the application code does.
+    @@check(expression: "\"allocated\" >= 0 AND \"allocated\" <= \"onHand\"", name: "stock_level_allocated_within_on_hand")
 }
 
 // Why a quantity changed. Transfers are recorded because stock moved, not because

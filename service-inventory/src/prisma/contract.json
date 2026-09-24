@@ -1495,6 +1495,13 @@
               "uniques": []
             },
             "stockLevel": {
+              "checks": [
+                {
+                  "expression": "\"allocated\" >= 0 AND \"allocated\" <= \"onHand\"",
+                  "name": "stock_level_allocated_within_on_hand_46d1460c",
+                  "prefix": "stock_level_allocated_within_on_hand"
+                }
+              ],
               "columns": {
                 "allocated": {
                   "codecId": "pg/int4@1",
@@ -1798,7 +1805,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "e7306534296be3c04579cdb84c43b20bd7c1b45f0cb2b2b4ed3231216de5bf3e"
+    "storageHash": "b55b1bccc29b669e6bcb870842e3a29e60cd221278deee7125673056b4c02458"
   },
   "execution": {
     "executionHash": "a013919971fd92aad9e9e5a58754f34f53deba60b8b487a18902393ad8105a95",
