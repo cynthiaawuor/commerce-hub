@@ -1,4 +1,5 @@
 import { isUniqueViolation } from "../core/db-errors";
+import { claimEvent } from "../events/processed-events.repository";
 import { db } from "../prisma/db";
 
 const StockLevel = db.orm.public.StockLevel;
@@ -127,3 +128,127 @@ export {
   type Movement,
   type MovementType,
 };
+
+type OnOrderLine = {
+  productId: string;
+  locationId: string;
+  quantity: number;
+};
+
+// An approved purchase order means stock is coming: quantity on order rises, nothing
+// physically moved, so no movement is recorded. Claiming the event and changing the
+// quantities happen together, so a redelivery cannot count the order twice.
+const applyOnOrder = async (
+  eventId: string,
+  eventType: string,
+  lines: OnOrderLine[],
+) =>
+  db.transaction(async (tx) => {
+    if (!(await claimEvent(tx, eventId, eventType))) {
+      return false;
+    }
+
+    for (const line of lines) {
+      const level = await findOrCreateLevel(tx, line.productId, line.locationId);
+
+      await tx.orm.public.StockLevel.where({ id: level.id }).update({
+        onOrder: Math.max(level.onOrder + line.quantity, 0),
+      });
+    }
+
+    return true;
+  });
+
+type ReceiptLine = {
+  productId: string;
+  quantity: number;
+  unitCostCents: number;
+};
+
+// Weighted average: the new cost is what the stock we now hold cost on average.
+// Rounded to whole cents, since money is never fractional here.
+const weightedAverage = (
+  heldQuantity: number,
+  heldCostCents: number,
+  arrivedQuantity: number,
+  arrivedCostCents: number,
+) => {
+  const total = heldQuantity + arrivedQuantity;
+
+  if (total <= 0) {
+    return arrivedCostCents;
+  }
+
+  return Math.round(
+    (heldQuantity * heldCostCents + arrivedQuantity * arrivedCostCents) / total,
+  );
+};
+
+// Goods have arrived: stock on hand rises, what was on order falls, a RECEIPT movement
+// records it, and the product's average cost is recalculated. A receipt is the only
+// moment Inventory learns what stock cost.
+const applyReceipt = async (
+  eventId: string,
+  eventType: string,
+  locationId: string,
+  reference: string,
+  recordedBy: string,
+  lines: ReceiptLine[],
+) =>
+  db.transaction(async (tx) => {
+    if (!(await claimEvent(tx, eventId, eventType))) {
+      return false;
+    }
+
+    for (const line of lines) {
+      const level = await findOrCreateLevel(tx, line.productId, locationId);
+      const onHand = level.onHand + line.quantity;
+
+      await tx.orm.public.StockLevel.where({ id: level.id }).update({
+        onHand,
+        // Never below zero: receiving more than was ordered still only cancels
+        // what was outstanding
+        onOrder: Math.max(level.onOrder - line.quantity, 0),
+      });
+
+      await tx.orm.public.StockMovement.create({
+        productId: line.productId,
+        locationId,
+        type: "RECEIPT",
+        quantity: line.quantity,
+        onHandAfter: onHand,
+        reason: null,
+        reference,
+        recordedBy,
+      });
+
+      // Cost is averaged across everything held, not just this location
+      const held = await tx.orm.public.StockLevel.where({
+        productId: line.productId,
+      })
+        .select("onHand")
+        .all();
+
+      const heldQuantity = held.reduce(
+        (total, row) => total + row.onHand,
+        0,
+      ) - line.quantity;
+
+      const product = await tx.orm.public.Product.where({ id: line.productId })
+        .select("averageCostCents")
+        .first();
+
+      await tx.orm.public.Product.where({ id: line.productId }).update({
+        averageCostCents: weightedAverage(
+          Math.max(heldQuantity, 0),
+          product?.averageCostCents ?? 0,
+          line.quantity,
+          line.unitCostCents,
+        ),
+      });
+    }
+
+    return true;
+  });
+
+export { applyOnOrder, applyReceipt, weightedAverage };
