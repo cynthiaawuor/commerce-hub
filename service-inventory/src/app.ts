@@ -4,6 +4,7 @@ import { config } from "./core/config";
 import { errorHandler, notFoundHandler } from "./core/error-handler";
 import locationsRouter from "./locations/locations.router";
 import productsRouter from "./products/products.router";
+import stockRouter from "./stock/stock.router";
 
 // Built separately from the server so tests can drive the app without opening a port.
 const createApp = () => {
@@ -25,6 +26,7 @@ const createApp = () => {
   if (config.featureInventory) {
     app.use("/inventory-api/products", productsRouter);
     app.use("/inventory-api/locations", locationsRouter);
+    app.use("/inventory-api/stock", stockRouter);
   }
 
   // Must be registered after every route
