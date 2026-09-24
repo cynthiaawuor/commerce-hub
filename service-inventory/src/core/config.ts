@@ -16,6 +16,9 @@ export const config = {
   // cannot hold stock out of circulation forever
   reservationTtlMs: Number(process.env["RESERVATION_TTL_MS"] ?? 900000),
 
+  // How often expired reservations are swept
+  reservationSweepMs: Number(process.env["RESERVATION_SWEEP_MS"] ?? 60000),
+
   // Where goods are assumed to be heading when a purchase order is approved.
   // The GoodsReceived event says where they actually landed.
   defaultLocationCode: process.env["DEFAULT_LOCATION_CODE"] ?? "WH-MAIN",

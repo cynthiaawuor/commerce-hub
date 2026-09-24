@@ -3,7 +3,12 @@ import { createApp } from "./app";
 import { config } from "./core/config";
 import { closeConsumers } from "./events/event-consumer";
 import { startGoodsReceivedConsumer } from "./events/goods-received.consumer";
+import { startOutboxWorker, stopOutboxWorker } from "./events/outbox-worker";
 import { startPurchaseOrderApprovedConsumer } from "./events/purchase-order-approved.consumer";
+import {
+  startReservationSweeper,
+  stopReservationSweeper,
+} from "./reservations/reservation-sweeper";
 
 const PORT = process.env["PORT"] || 3002;
 
@@ -17,6 +22,9 @@ const server = createApp().listen(PORT, () => {
     return;
   }
 
+  startOutboxWorker();
+  startReservationSweeper();
+
   // Listening is best-effort at startup: if the broker is down the service still serves
   // HTTP, and events wait in RabbitMQ until it is back.
   startPurchaseOrderApprovedConsumer().catch((err) =>
@@ -28,6 +36,8 @@ const server = createApp().listen(PORT, () => {
 });
 
 const shutdown = async () => {
+  stopReservationSweeper();
+  await stopOutboxWorker();
   await closeConsumers();
   server.close(() => process.exit(0));
 };
