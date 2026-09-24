@@ -1,5 +1,9 @@
 import type { CurrentUser } from "../core/current-user";
-import { BadRequestError, ConflictError, NotFoundError } from "../core/http-error";
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+} from "../core/http-error";
 import parseAndValidate from "../core/validation";
 import * as locationRepository from "../locations/locations.repository";
 import * as productRepository from "../products/products.repository";
@@ -45,7 +49,7 @@ const getMovements = async (
 };
 
 // The manual correction path: a stock count, damage, shrinkage. Receipts and sales
-// arrive as events (stage 5) rather than through here.
+// arrive as events rather than through here.
 const adjustStock = async (body: unknown, user: CurrentUser) => {
   const { obj, errors } = await parseAndValidate(AdjustStockDto, body);
 
