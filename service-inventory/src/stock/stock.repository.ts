@@ -1,5 +1,7 @@
 import { isUniqueViolation } from "../core/db-errors";
+import { hasCrossedReorderPoint } from "./stock-low";
 import { claimEvent } from "../events/processed-events.repository";
+import { STOCK_LOW } from "../events/event-types";
 import { db } from "../prisma/db";
 
 const StockLevel = db.orm.public.StockLevel;
@@ -9,12 +11,7 @@ const StockMovement = db.orm.public.StockMovement;
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 type MovementType =
-  | "RECEIPT"
-  | "SALE"
-  | "RETURN"
-  | "ADJUSTMENT"
-  | "TRANSFER_IN"
-  | "TRANSFER_OUT";
+  "RECEIPT" | "SALE" | "RETURN" | "ADJUSTMENT" | "TRANSFER_IN" | "TRANSFER_OUT";
 
 type Movement = {
   productId: string;
@@ -57,6 +54,53 @@ const findMovements = async (
     .orderBy([(m) => m.createdAt.desc(), (m) => m.id.desc()])
     .limit(limit)
     .all();
+};
+
+// Writes StockLow to the outbox when this change took available products past the product's
+// reorder point. Same transaction as the stock change, so Procurement is never told
+// about a shortage that did not happen, and never misses one that did.
+const raiseStockLowIfCrossed = async (
+  tx: Tx,
+  productId: string,
+  locationId: string,
+  availableBefore: number,
+  availableAfter: number,
+) => {
+  const product = await tx.orm.public.Product.where({ id: productId })
+    .select("name", "reorderPoint", "reorderQuantity")
+    .first();
+
+  if (!product) {
+    return;
+  }
+
+  if (
+    !hasCrossedReorderPoint(
+      availableBefore,
+      availableAfter,
+      product.reorderPoint,
+    )
+  ) {
+    return;
+  }
+
+  const location = await tx.orm.public.Location.where({ id: locationId })
+    .select("code")
+    .first();
+
+  await tx.orm.public.OutboxEvent.create({
+    eventType: STOCK_LOW,
+    aggregateId: productId,
+    payload: JSON.stringify({
+      productId,
+      productName: product.name,
+      // Other services quote codes rather than our ids
+      locationId: location?.code ?? locationId,
+      quantityAvailable: Math.max(availableAfter, 0),
+      reorderPoint: product.reorderPoint,
+      reorderQuantity: product.reorderQuantity,
+    }),
+  });
 };
 
 // Stock levels are created when stock first arrives at a location, not up front for
@@ -116,11 +160,20 @@ const applyMovement = async (movement: Movement) =>
       recordedBy: movement.recordedBy,
     });
 
+    await raiseStockLowIfCrossed(
+      tx,
+      movement.productId,
+      movement.locationId,
+      level.onHand - level.allocated,
+      onHand - level.allocated,
+    );
+
     return updated!;
   });
 
 export {
   applyMovement,
+  raiseStockLowIfCrossed,
   findLevel,
   findLevelsByLocation,
   findLevelsByProduct,
@@ -149,7 +202,11 @@ const applyOnOrder = async (
     }
 
     for (const line of lines) {
-      const level = await findOrCreateLevel(tx, line.productId, line.locationId);
+      const level = await findOrCreateLevel(
+        tx,
+        line.productId,
+        line.locationId,
+      );
 
       await tx.orm.public.StockLevel.where({ id: level.id }).update({
         onOrder: Math.max(level.onOrder + line.quantity, 0),
@@ -229,10 +286,8 @@ const applyReceipt = async (
         .select("onHand")
         .all();
 
-      const heldQuantity = held.reduce(
-        (total, row) => total + row.onHand,
-        0,
-      ) - line.quantity;
+      const heldQuantity =
+        held.reduce((total, row) => total + row.onHand, 0) - line.quantity;
 
       const product = await tx.orm.public.Product.where({ id: line.productId })
         .select("averageCostCents")
