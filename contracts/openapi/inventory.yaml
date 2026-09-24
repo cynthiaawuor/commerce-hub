@@ -1,0 +1,511 @@
+openapi: 3.1.0
+info:
+  title: Inventory Service
+  version: 1.0.0
+  description: |
+    The single source of truth for stock: how much of each product the business owns,
+    where it is, and what it is worth.
+
+    Quantities are kept apart on purpose:
+      onHand     physically present, including stock reserved for a sale in progress
+      allocated  promised to a sale that has not completed
+      onOrder    on an approved purchase order that has not arrived
+      available  onHand minus allocated, always calculated, never stored
+
+    Money is integer cents (KES 1,250.50 is 125050). Average cost is weighted and only
+    changes when goods are received, which is the only moment the cost is known.
+
+    There is no auth service yet: the caller identifies itself with an x-user-id header.
+servers:
+  - url: http://localhost:3002/inventory-api
+    description: Local development
+
+tags:
+  - name: Products
+  - name: Locations
+  - name: Stock
+  - name: Reservations
+  - name: Valuation
+  - name: Health
+
+components:
+  parameters:
+    UserId:
+      name: x-user-id
+      in: header
+      required: true
+      schema: { type: string }
+      description: Who is making the request (stands in for authentication)
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message: { type: string }
+            details:
+              type: object
+              additionalProperties:
+                type: array
+                items: { type: string }
+    Product:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        sku: { type: string, example: MAIZE-2KG }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        unitOfMeasure: { type: string, default: each }
+        widthMm: { type: integer, nullable: true }
+        heightMm: { type: integer, nullable: true }
+        depthMm: { type: integer, nullable: true }
+        weightG: { type: integer, nullable: true }
+        reorderPoint:
+          type: integer
+          description: Crossing this publishes StockLow. Zero means do not watch this product.
+        reorderQuantity: { type: integer }
+        averageCostCents:
+          type: integer
+          description: Weighted average, set by goods received, never by the client
+        isActive: { type: boolean }
+    Location:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: WH-MAIN }
+        name: { type: string }
+        isActive: { type: boolean }
+    StockLevel:
+      type: object
+      properties:
+        productId: { type: string, format: uuid }
+        locationId: { type: string, format: uuid }
+        onHand: { type: integer }
+        allocated: { type: integer }
+        onOrder: { type: integer }
+        available:
+          type: integer
+          description: onHand minus allocated, calculated on read
+    StockMovement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type:
+          type: string
+          enum: [RECEIPT, SALE, RETURN, ADJUSTMENT, TRANSFER_IN, TRANSFER_OUT]
+        quantity:
+          type: integer
+          description: Positive adds stock, negative removes it
+        onHandAfter: { type: integer }
+        reason: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+        recordedBy: { type: string }
+        createdAt: { type: string }
+    Reservation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        locationId: { type: string, format: uuid }
+        quantity: { type: integer }
+        status: { type: string, enum: [ACTIVE, COMMITTED, RELEASED, EXPIRED] }
+        reference: { type: string, nullable: true }
+        reservedBy: { type: string }
+        expiresAt: { type: string }
+        resolvedAt: { type: string, nullable: true }
+
+  responses:
+    BadRequest:
+      description: The request body or query is not valid
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: No such record
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: The change is not allowed in this state
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Is the service up?
+      responses:
+        '200':
+          description: Service status and whether the module's feature flag is on
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  service: { type: string }
+                  enabled: { type: boolean }
+
+  /products:
+    get:
+      tags: [Products]
+      summary: List products
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { name: search, in: query, schema: { type: string }, description: Matches SKU or name }
+        - { name: isActive, in: query, schema: { type: string, enum: ['true', 'false'] } }
+      responses:
+        '200':
+          description: A page of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Product' }
+                  meta:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      limit: { type: integer }
+                      total: { type: integer }
+                      totalPages: { type: integer }
+    post:
+      tags: [Products]
+      summary: Create a product
+      description: >-
+        averageCostCents cannot be set here. Cost comes from goods received, never from
+        whoever is creating the product.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, name]
+              properties:
+                sku: { type: string, maxLength: 50 }
+                name: { type: string, maxLength: 200 }
+                description: { type: string }
+                unitOfMeasure: { type: string }
+                widthMm: { type: integer, minimum: 0 }
+                heightMm: { type: integer, minimum: 0 }
+                depthMm: { type: integer, minimum: 0 }
+                weightG: { type: integer, minimum: 0 }
+                reorderPoint: { type: integer, minimum: 0 }
+                reorderQuantity: { type: integer, minimum: 0 }
+      responses:
+        '201':
+          description: The product
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409':
+          description: A product with this SKU already exists
+
+  /products/sku/{sku}:
+    get:
+      tags: [Products]
+      summary: Find a product by SKU
+      description: Other services hold SKUs rather than our ids.
+      parameters:
+        - { name: sku, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: The product
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /products/{id}:
+    get:
+      tags: [Products]
+      summary: One product
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: The product }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Products]
+      summary: Update a product
+      description: >-
+        The SKU cannot change: other services quote it and movements already refer to it.
+        Retire a product with isActive instead of deleting it.
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                unitOfMeasure: { type: string }
+                reorderPoint: { type: integer, minimum: 0 }
+                reorderQuantity: { type: integer, minimum: 0 }
+                isActive: { type: boolean }
+      responses:
+        '200': { description: The updated product }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /locations:
+    get:
+      tags: [Locations]
+      summary: List locations
+      responses:
+        '200':
+          description: Every location, unpaged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Location' }
+    post:
+      tags: [Locations]
+      summary: Create a location
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string, example: STORE-3 }
+                name: { type: string }
+      responses:
+        '201': { description: The location }
+        '409': { description: A location with this code already exists }
+
+  /locations/{id}:
+    get:
+      tags: [Locations]
+      summary: One location
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: The location }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Locations]
+      summary: Update a location
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                isActive: { type: boolean }
+      responses:
+        '200': { description: The updated location }
+
+  /stock:
+    get:
+      tags: [Stock]
+      summary: Stock by product or by location
+      description: >-
+        Give either productId (where a product is) or locationId (what a location holds).
+        A product with no row at a location has none of it there.
+      parameters:
+        - { name: productId, in: query, schema: { type: string, format: uuid } }
+        - { name: locationId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Stock levels
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/StockLevel' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /stock/movements:
+    get:
+      tags: [Stock]
+      summary: The ledger behind a quantity
+      parameters:
+        - { name: productId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: locationId, in: query, schema: { type: string, format: uuid } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      responses:
+        '200':
+          description: Movements, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/StockMovement' }
+
+  /stock/adjustments:
+    post:
+      tags: [Stock]
+      summary: Correct a quantity
+      description: >-
+        A stock count, damage or shrinkage. A reason is required: an unexplained change
+        to stock is the problem this module exists to remove. Receipts and sales arrive
+        as events instead.
+      parameters:
+        - { $ref: '#/components/parameters/UserId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId, locationId, quantity, reason]
+              properties:
+                productId: { type: string, format: uuid }
+                locationId: { type: string, format: uuid }
+                quantity:
+                  type: integer
+                  description: Positive adds stock, negative removes it
+                reason: { type: string, maxLength: 500 }
+                reference: { type: string, maxLength: 100 }
+      responses:
+        '201': { description: The updated stock level }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409':
+          description: The change would take stock below zero, or below what is reserved
+
+  /reservations:
+    get:
+      tags: [Reservations]
+      summary: Reservations currently holding stock
+      responses:
+        '200':
+          description: Active reservations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Reservation' }
+    post:
+      tags: [Reservations]
+      summary: Hold stock for a sale in progress
+      description: >-
+        Lowers available so no other channel can sell the same unit. onHand does not move
+        until the sale is committed. A reservation nobody comes back for is swept once it
+        expires.
+      parameters:
+        - { $ref: '#/components/parameters/UserId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId, locationId, quantity]
+              properties:
+                productId: { type: string, format: uuid }
+                locationId: { type: string, format: uuid }
+                quantity: { type: integer, minimum: 1 }
+                reference: { type: string, description: The POS transaction }
+      responses:
+        '201': { description: The reservation }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Not enough available, or another sale took the last of it
+
+  /reservations/{id}:
+    get:
+      tags: [Reservations]
+      summary: One reservation
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: The reservation }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /reservations/{id}/release:
+    post:
+      tags: [Reservations]
+      summary: Give the stock back
+      description: The cashier cancelled. The hold ends and the stock is sellable again.
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+      responses:
+        '200': { description: The released reservation }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /reservations/{id}/commit:
+    post:
+      tags: [Reservations]
+      summary: Complete the sale
+      description: >-
+        The moment stock actually leaves: onHand falls, the hold ends, and a SALE movement
+        is recorded. An expired reservation cannot be committed.
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/UserId' }
+      responses:
+        '200': { description: The committed reservation }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /valuation:
+    get:
+      tags: [Valuation]
+      summary: What the stock is worth
+      description: Quantity on hand times average cost. Reserved stock is still ours, so it counts.
+      parameters:
+        - { name: locationId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Totals for the business, or one location
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      totalValueCents: { type: integer }
+                      totalUnits: { type: integer }
+                      locations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            locationId: { type: string }
+                            code: { type: string }
+                            name: { type: string }
+                            units: { type: integer }
+                            valueCents: { type: integer }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /valuation/lines:
+    get:
+      tags: [Valuation]
+      summary: The lines behind the figure
+      parameters:
+        - { name: locationId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: One line per product and location, most valuable first

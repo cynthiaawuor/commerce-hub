@@ -1,11 +1,13 @@
 import type { Request, Response } from "express";
 import express from "express";
 import { config } from "./core/config";
+import { mountDocs } from "./core/docs";
 import { errorHandler, notFoundHandler } from "./core/error-handler";
 import locationsRouter from "./locations/locations.router";
 import productsRouter from "./products/products.router";
 import reservationsRouter from "./reservations/reservations.router";
 import stockRouter from "./stock/stock.router";
+import valuationRouter from "./valuation/valuation.router";
 
 // Built separately from the server so tests can drive the app without opening a port.
 const createApp = () => {
@@ -22,6 +24,9 @@ const createApp = () => {
     });
   });
 
+  // Always available, flag or not: the contract is what other teams build against
+  mountDocs(app);
+
   // The whole module sits behind its phase flag: with the flag off the service still
   // runs and answers health checks, but exposes none of its routes.
   if (config.featureInventory) {
@@ -29,6 +34,7 @@ const createApp = () => {
     app.use("/inventory-api/locations", locationsRouter);
     app.use("/inventory-api/stock", stockRouter);
     app.use("/inventory-api/reservations", reservationsRouter);
+    app.use("/inventory-api/valuation", valuationRouter);
   }
 
   // Must be registered after every route
