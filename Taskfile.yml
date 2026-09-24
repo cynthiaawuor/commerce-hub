@@ -8,7 +8,7 @@ output: prefixed
 
 vars:
   # Each service owns a private database, so there is one container per service
-  POSTGRES_CONTAINERS: commerce_postgres procurement_postgres
+  POSTGRES_CONTAINERS: commerce_postgres procurement_postgres inventory_postgres
   RABBITMQ_CONTAINER: commerce_rabbitmq
 
 tasks:
@@ -27,7 +27,7 @@ tasks:
   dev:apps:
     internal: true
     # deps run at the same time, so every server stays in the foreground until Ctrl+C
-    deps: [dev:vendor, dev:procurement, dev:portal, dev:dashboard]
+    deps: [dev:vendor, dev:procurement, dev:inventory, dev:portal, dev:dashboard]
 
   dev:vendor:
     desc: Run service-vendor in watch mode (http://localhost:3000)
@@ -41,6 +41,14 @@ tasks:
     desc: Run service-procurement in watch mode (http://localhost:3001)
     dir: service-procurement
     prefix: procurement
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:inventory:
+    desc: Run service-inventory in watch mode (http://localhost:3002)
+    dir: service-inventory
+    prefix: inventory
     interactive: true
     cmds:
       - npm run dev

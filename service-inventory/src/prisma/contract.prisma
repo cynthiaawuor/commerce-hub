@@ -1,0 +1,210 @@
+// ------------------------------------------------------
+// Money is always stored as integer cents (KES 1,250.50 → 125050), never as floats.
+// Inventory is the single source of truth for how much stock exists and where. It does
+// not decide which bin something sits in (Warehouse Operations) or what it sells for
+// (Retail Sales).
+// ------------------------------------------------------
+
+// The product master: the canonical record every other service's productId points at.
+model Product {
+    id  String @id @default(uuid())
+    // What people quote: MAIZE-2KG
+    sku String @unique
+
+    name          String
+    description   String?
+    unitOfMeasure String  @default("each")
+
+    // Physical attributes Warehouse Operations asks for when deciding where to put stock.
+    // Sales velocity is not a column: it is counted from SALE movements.
+    widthMm  Int?
+    heightMm Int?
+    depthMm  Int?
+    weightG  Int?
+
+    // Crossing this level publishes StockLow; reorderQuantity is what we suggest ordering
+    reorderPoint    Int @default(0)
+    reorderQuantity Int @default(0)
+
+    // Weighted average cost, recalculated on every receipt.
+    // Stock value is quantity × averageCostCents.
+    averageCostCents Int @default(0)
+
+    isActive Boolean @default(true)
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    stockLevels  StockLevel[]
+    movements    StockMovement[]
+    reservations Reservation[]
+}
+
+// Somewhere stock can be: a warehouse or a store backroom. Inventory knows where stock
+// is, not what kind of place that is or what happens there.
+model Location {
+    id   String @id @default(uuid())
+    // Short code people use: WH-MAIN, STORE-3
+    code String @unique
+
+    name     String
+    isActive Boolean @default(true)
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    stockLevels  StockLevel[]
+    movements    StockMovement[]
+    reservations Reservation[]
+}
+
+// How much of a product is at a location. One row per pair.
+model StockLevel {
+    id         String @id @default(uuid())
+    productId  String
+    locationId String
+
+    // Physically present, including anything reserved
+    onHand    Int @default(0)
+    // Promised to a sale in progress; available = onHand - allocated
+    allocated Int @default(0)
+    // On an approved purchase order that has not arrived yet
+    onOrder   Int @default(0)
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+    location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+    @@unique([productId, locationId])
+    // The database's own guarantee that stock is never oversold: two tills racing for
+    // the last unit cannot both win, whatever the application code does.
+    @@check(expression: "\"allocated\" >= 0 AND \"allocated\" <= \"onHand\"", name: "stock_level_allocated_within_on_hand")
+}
+
+// Why a quantity changed. Transfers are recorded because stock moved, not because
+// Inventory decides transfers: Warehouse Operations does that.
+enum StockMovementType {
+    RECEIPT      = "RECEIPT"
+    SALE         = "SALE"
+    RETURN       = "RETURN"
+    ADJUSTMENT   = "ADJUSTMENT"
+    TRANSFER_IN  = "TRANSFER_IN"
+    TRANSFER_OUT = "TRANSFER_OUT"
+
+    @@type("pg/text@1")
+}
+
+// Append-only ledger. The stock level is the running total; this explains how it got
+// there. Nothing here is ever updated or deleted.
+model StockMovement {
+    id         String @id @default(uuid())
+    productId  String
+    locationId String
+
+    type        StockMovementType
+    // Positive adds stock, negative removes it
+    quantity    Int
+    // What onHand became after this movement, so history reads without re-adding
+    onHandAfter Int
+
+    // Free text for adjustments ("damaged in handling", "stock count")
+    reason     String?
+    // The GRN, sale or purchase order this came from
+    reference  String?
+    recordedBy String
+
+    createdAt TimestamptzString @default(now())
+
+    product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+    location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+    @@index([productId, locationId, createdAt])
+}
+
+// ACTIVE: stock is held for a sale in progress
+// COMMITTED: the sale completed and the stock left
+// RELEASED: the till gave it back
+// EXPIRED: nobody came back for it and the sweeper freed it
+enum ReservationStatus {
+    ACTIVE    = "ACTIVE"
+    COMMITTED = "COMMITTED"
+    RELEASED  = "RELEASED"
+    EXPIRED   = "EXPIRED"
+
+    @@type("pg/text@1")
+}
+
+// A promise to a till, not a movement: only committing takes stock off the shelf.
+// expiresAt bounds the damage when a till crashes mid-sale.
+model Reservation {
+    id         String @id @default(uuid())
+    productId  String
+    locationId String
+
+    quantity Int
+    status   ReservationStatus @default(ACTIVE)
+
+    // The POS transaction this is held for
+    reference  String?
+    reservedBy String
+    expiresAt  TimestamptzString
+    resolvedAt TimestamptzString?
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+    location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+    @@index([status, expiresAt])
+}
+
+// ------------------------------------------------------
+// PENDING: waiting to be published (or waiting for its next retry)
+// PUBLISHED: RabbitMQ has confirmed it
+// DEAD: given up on; kept for inspection and manual retry, never silently deleted
+// ------------------------------------------------------
+enum OutboxEventStatus {
+    PENDING   = "PENDING"
+    PUBLISHED = "PUBLISHED"
+    DEAD      = "DEAD"
+
+    @@type("pg/text@1")
+}
+
+// Transactional outbox: an event is written in the same transaction as the change that
+// caused it, so the two can never disagree. A worker publishes the rows afterwards.
+model OutboxEvent {
+    id String @id @default(uuid())
+
+    // e.g. "StockLow"
+    eventType   String
+    // The product the event is about
+    aggregateId String
+
+    payload String
+
+    status      OutboxEventStatus  @default(PENDING)
+    publishedAt TimestamptzString?
+
+    attempts      Int                @default(0)
+    lastError     String?
+    nextAttemptAt TimestamptzString  @default(now())
+    deadAt        TimestamptzString?
+
+    createdAt TimestamptzString @default(now())
+
+    @@index([status, nextAttemptAt])
+}
+
+// Events already handled, so a redelivered message cannot add the same stock twice.
+// Written in the same transaction as the change it caused.
+model ProcessedEvent {
+    // The eventId from the envelope
+    id        String @id
+    eventType String
+
+    handledAt TimestamptzString @default(now())
+}
