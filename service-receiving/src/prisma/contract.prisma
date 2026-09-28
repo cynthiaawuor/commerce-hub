@@ -1,0 +1,148 @@
+// ------------------------------------------------------
+// Receiving is the check between what was ordered and what actually arrived.
+// It knows quantities and condition, never money: unitCostCents is carried only so
+// the GoodsReceived event can tell Inventory what the stock cost.
+// purchaseOrderId, supplierId and productId are soft references to other services.
+// ------------------------------------------------------
+
+// OPEN: goods still expected. CLOSED: everything ordered has arrived.
+enum ExpectedDeliveryStatus {
+    OPEN   = "OPEN"
+    CLOSED = "CLOSED"
+
+    @@type("pg/text@1")
+}
+
+// Built from Procurement's PurchaseOrderApproved event, so the dock knows what to expect
+// even if Procurement is down when the truck arrives.
+model ExpectedDelivery {
+    id String @id @default(uuid())
+
+    // Procurement's id for the order; one expected delivery per order
+    purchaseOrderId String @unique
+    poNumber        String
+    supplierId      String
+    supplierName    String
+
+    status ExpectedDeliveryStatus @default(OPEN)
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    products           ExpectedProduct[]
+    goodsReceivedNotes GoodsReceivedNote[]
+}
+
+model ExpectedProduct {
+    id                 String @id @default(uuid())
+    expectedDeliveryId String
+
+    productId   String
+    productName String
+
+    quantityOrdered  Int
+    quantityReceived Int @default(0)
+    unitCostCents    Int
+
+    expectedDelivery ExpectedDelivery @relation(fields: [expectedDeliveryId], references: [id], onDelete: Cascade)
+
+    @@unique([expectedDeliveryId, productId])
+}
+
+// The formal record that goods entered the business
+model GoodsReceivedNote {
+    id                      String @id @default(uuid())
+    goodsReceivedNoteNumber String @unique
+
+    expectedDeliveryId String
+    purchaseOrderId    String
+    poNumber           String
+    supplierId         String
+
+    // Where the goods were taken in
+    locationCode String
+    receivedBy   String
+    notes        String?
+
+    createdAt TimestamptzString @default(now())
+
+    expectedDelivery ExpectedDelivery           @relation(fields: [expectedDeliveryId], references: [id])
+    products         GoodsReceivedNoteProduct[]
+}
+
+// How what arrived compares with what was expected
+enum Discrepancy {
+    NONE        = "NONE"
+    LESS       = "LESS"
+    MORE        = "MORE"
+    NOT_ORDERED = "NOT_ORDERED"
+
+    @@type("pg/text@1")
+}
+
+model GoodsReceivedNoteProduct {
+    id                  String @id @default(uuid())
+    goodsReceivedNoteId String
+
+    productId   String
+    productName String
+
+    // Still outstanding on the order when the truck arrived
+    quantityExpected  Int
+    // Counted off the truck
+    quantityDelivered Int
+    // Arrived damaged: recorded here and quarantined, never sent to sellable stock
+    quantityDamaged   Int @default(0)
+    // Taken into stock: good units, up to what was expected
+    quantityAccepted  Int
+
+    discrepancy Discrepancy
+
+    unitCostCents Int
+
+    goodsReceivedNote GoodsReceivedNote @relation(fields: [goodsReceivedNoteId], references: [id], onDelete: Cascade)
+}
+
+// ------------------------------------------------------
+// PENDING: waiting to be published (or waiting for its next retry)
+// PUBLISHED: RabbitMQ has confirmed it
+// DEAD: given up on; kept for inspection and manual retry, never silently deleted
+// ------------------------------------------------------
+enum OutboxEventStatus {
+    PENDING   = "PENDING"
+    PUBLISHED = "PUBLISHED"
+    DEAD      = "DEAD"
+
+    @@type("pg/text@1")
+}
+
+// Transactional outbox: GoodsReceived is written in the same transaction as the goodsReceivedNote,
+// so the two can never disagree. A worker publishes the rows afterwards.
+model OutboxEvent {
+    id String @id @default(uuid())
+
+    eventType   String
+    aggregateId String
+    payload     String
+
+    status      OutboxEventStatus  @default(PENDING)
+    publishedAt TimestamptzString?
+
+    attempts      Int                @default(0)
+    lastError     String?
+    nextAttemptAt TimestamptzString  @default(now())
+    deadAt        TimestamptzString?
+
+    createdAt TimestamptzString @default(now())
+
+    @@index([status, nextAttemptAt])
+}
+
+// Events already handled, so a redelivered PurchaseOrderApproved is ignored
+model ProcessedEvent {
+    // The eventId from the envelope
+    id        String @id
+    eventType String
+
+    handledAt TimestamptzString @default(now())
+}
