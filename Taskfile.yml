@@ -27,7 +27,19 @@ tasks:
   dev:apps:
     internal: true
     # deps run at the same time, so every server stays in the foreground until Ctrl+C
+<<<<<<< Updated upstream
     deps: [dev:vendor, dev:procurement, dev:portal, dev:dashboard]
+=======
+    deps:
+      [
+        dev:vendor,
+        dev:procurement,
+        dev:inventory,
+        dev:portal,
+        dev:dashboard,
+        dev:control-center,
+      ]
+>>>>>>> Stashed changes
 
   dev:vendor:
     desc: Run service-vendor in watch mode (http://localhost:3000)
@@ -57,6 +69,14 @@ tasks:
     desc: Run procurement-dashboard in watch mode (http://localhost:5174)
     dir: procurement-dashboard
     prefix: dashboard
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:control-center:
+    desc: Run inventory-control-center in watch mode (http://localhost:5175)
+    dir: inventory-control-center
+    prefix: control-center
     interactive: true
     cmds:
       - npm run dev

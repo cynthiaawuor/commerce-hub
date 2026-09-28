@@ -1,7 +1,8 @@
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { Button } from "../../../components/ui/Button";
 import { Dialog } from "../../../components/ui/Dialog";
 import { FormField } from "../../../components/ui/FormField";
+import { ProductPicker } from "../../../components/ui/ProductPicker";
 import { inputClass } from "../../../components/ui/styles";
 import { ApiError } from "../../../lib/api-client";
 import type { CatalogItem, CreateCatalogItemInput } from "../../../types/catalog-item";
@@ -40,6 +41,9 @@ function CatalogItemForm({
   onSubmit: (values: CatalogItemFormValues) => Promise<unknown>;
 }) {
   const {
+    control,
+    getValues,
+    setValue,
     register,
     handleSubmit,
     setError,
@@ -92,17 +96,30 @@ function CatalogItemForm({
         </p>
       )}
 
+      {/* Products live in Inventory, so the user searches them rather than typing an id */}
       <FormField
         id="productId"
-        label="Product ID"
-        hint="The product's ID in the Inventory service"
+        label="Product"
+        hint="Search the products Inventory holds"
         error={errors.productId?.message}
       >
-        <input
-          id="productId"
-          className={inputClass}
-          {...errorProps("productId")}
-          {...register("productId", { required: "Product ID is required", setValueAs: trim })}
+        <Controller
+          control={control}
+          name="productId"
+          rules={{ required: "Choose a product" }}
+          render={({ field }) => (
+            <ProductPicker
+              value={field.value}
+              invalid={Boolean(errors.productId)}
+              onChange={(product) => {
+                field.onChange(product?.id ?? "");
+                // Save retyping: the supplier's item is usually called the same thing
+                if (product && !getValues("name")) {
+                  setValue("name", product.name);
+                }
+              }}
+            />
+          )}
         />
       </FormField>
 
