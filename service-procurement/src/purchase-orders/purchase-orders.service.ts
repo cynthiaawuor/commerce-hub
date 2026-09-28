@@ -304,7 +304,7 @@ const approvePurchaseOrder = async (id: string, user: CurrentUser) => {
   const order = await purchaseOrderRepository.findById(id);
   const payload: PurchaseOrderApprovedPayload = {
     purchaseOrderId: purchaseOrder.id,
-    poNumber: purchaseOrder.poNumber,
+    purchaseOrderNumber: purchaseOrder.poNumber,
     supplierId: order!.supplierId,
     supplierName: order!.supplierName,
     paymentTerms: order!.paymentTerms,
@@ -312,7 +312,7 @@ const approvePurchaseOrder = async (id: string, user: CurrentUser) => {
     totalCents: Number(purchaseOrder.totalCents),
     approvedBy: user.id,
     approvedAt,
-    lines: order!.lines.map((line) => ({
+    products: order!.lines.map((line) => ({
       productId: line.productId,
       productName: line.productName,
       quantityOrdered: line.quantityOrdered,
