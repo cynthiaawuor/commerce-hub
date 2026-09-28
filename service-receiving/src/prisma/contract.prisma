@@ -20,7 +20,7 @@ model ExpectedDelivery {
 
     // Procurement's id for the order; one expected delivery per order
     purchaseOrderId String @unique
-    poNumber        String
+    purchaseOrderNumber String
     supplierId      String
     supplierName    String
 
@@ -56,7 +56,7 @@ model GoodsReceivedNote {
 
     expectedDeliveryId String
     purchaseOrderId    String
-    poNumber           String
+    purchaseOrderNumber String
     supplierId         String
 
     // Where the goods were taken in

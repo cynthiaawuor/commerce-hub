@@ -102,14 +102,14 @@
                   "kind": "scalar"
                 }
               },
-              "poNumber": {
+              "purchaseOrderId": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
-              "purchaseOrderId": {
+              "purchaseOrderNumber": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
@@ -191,11 +191,11 @@
                 "id": {
                   "column": "id"
                 },
-                "poNumber": {
-                  "column": "poNumber"
-                },
                 "purchaseOrderId": {
                   "column": "purchaseOrderId"
+                },
+                "purchaseOrderNumber": {
+                  "column": "purchaseOrderNumber"
                 },
                 "status": {
                   "column": "status"
@@ -355,14 +355,14 @@
                   "kind": "scalar"
                 }
               },
-              "poNumber": {
+              "purchaseOrderId": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
-              "purchaseOrderId": {
+              "purchaseOrderNumber": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
@@ -436,11 +436,11 @@
                 "notes": {
                   "column": "notes"
                 },
-                "poNumber": {
-                  "column": "poNumber"
-                },
                 "purchaseOrderId": {
                   "column": "purchaseOrderId"
+                },
+                "purchaseOrderNumber": {
+                  "column": "purchaseOrderNumber"
                 },
                 "receivedBy": {
                   "column": "receivedBy"
@@ -786,12 +786,12 @@
                   "nativeType": "text",
                   "nullable": false
                 },
-                "poNumber": {
+                "purchaseOrderId": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": false
                 },
-                "purchaseOrderId": {
+                "purchaseOrderNumber": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": false
@@ -963,12 +963,12 @@
                   "nativeType": "text",
                   "nullable": true
                 },
-                "poNumber": {
+                "purchaseOrderId": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": false
                 },
-                "purchaseOrderId": {
+                "purchaseOrderNumber": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": false
@@ -1300,7 +1300,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "bfc1f324952bc169e64b3f044e35af3262ddaa7b2b43313f67b85d2450e726a9"
+    "storageHash": "0f1829e6bc5019fb5a420494a5672f9b2edc67248c68173a7ee431e55f039414"
   },
   "execution": {
     "executionHash": "fbef2618107ff640f83a48ff4358604131159778ee44d2b723a59dfee215b567",
