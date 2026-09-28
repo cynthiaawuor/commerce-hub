@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 
-version: '3'
+version: "3"
 
 # Label each line of output with the task it came from, so the dev servers
 # running side by side stay readable.
@@ -27,9 +27,6 @@ tasks:
   dev:apps:
     internal: true
     # deps run at the same time, so every server stays in the foreground until Ctrl+C
-<<<<<<< Updated upstream
-    deps: [dev:vendor, dev:procurement, dev:portal, dev:dashboard]
-=======
     deps:
       [
         dev:vendor,
@@ -39,7 +36,6 @@ tasks:
         dev:dashboard,
         dev:control-center,
       ]
->>>>>>> Stashed changes
 
   dev:vendor:
     desc: Run service-vendor in watch mode (http://localhost:3000)
