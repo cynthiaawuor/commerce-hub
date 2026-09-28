@@ -24,6 +24,20 @@ services:
     networks:
       - procurement_network
 
+  # Receiving's private database, on its own network so no other service can reach it
+  receiving-db:
+    image: postgres:18
+    container_name: receiving_postgres
+    environment:
+      POSTGRES_DB: service-receiving
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5437:5432'
+    networks:
+      - receiving_network
+
+
   # Event bus. Every service publishes domain events here; subscribers read at their own
   # pace, and a durable queue holds messages while a subscriber is down.
   rabbitmq:
@@ -37,8 +51,7 @@ services:
       # Management UI at http://localhost:15672 (guest/guest)
       - '15672:15672'
     healthcheck:
-      # Run as the rabbitmq user: as root it would create a root-owned .erlang.cookie
-      # that the server (running as rabbitmq) then cannot read
+      # Run as the rabbitmq user
       test: ['CMD-SHELL', 'gosu rabbitmq rabbitmq-diagnostics -q ping']
       interval: 10s
       timeout: 5s
@@ -50,3 +63,4 @@ networks:
   vendor_network: {}
   procurement_network: {}
   events_network: {}
+  receiving_network: {}

@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 
-version: '3'
+version: "3"
 
 # Label each line of output with the task it came from, so the dev servers
 # running side by side stay readable.
@@ -41,6 +41,14 @@ tasks:
     desc: Run service-procurement in watch mode (http://localhost:3001)
     dir: service-procurement
     prefix: procurement
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:receiving:
+    desc: Run service-receiving in watch mode (http://localhost:3003)
+    dir: service-receiving
+    prefix: receiving
     interactive: true
     cmds:
       - npm run dev
