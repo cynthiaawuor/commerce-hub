@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import express from "express";
 import { config } from "./core/config";
 import { errorHandler, notFoundHandler } from "./core/error-handler";
+import expectedDeliveriesRouter from "./expected-deliveries/expected-deliveries.router";
+import goodsReceivedNotesRouter from "./goods-received-notes/goods-received-notes.router";
 
 // Built separately from the server so tests can drive the app without opening a port.
 const createApp = () => {
@@ -22,7 +24,8 @@ const createApp = () => {
   // runs and answers health checks, but exposes none of its routes.
   if (config.featureReceiving) {
     //TODO
-    // Routers are mounted here in part 2
+    app.use("/receiving-api/expected-deliveries", expectedDeliveriesRouter);
+    app.use("/receiving-api/goods-received-notes", goodsReceivedNotesRouter);
   }
 
   // Must be registered after every route
