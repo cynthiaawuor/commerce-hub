@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import express from "express";
 import { config } from "./core/config";
+import { mountDocs } from "./core/docs";
 import { errorHandler, notFoundHandler } from "./core/error-handler";
 import expectedDeliveriesRouter from "./expected-deliveries/expected-deliveries.router";
 import goodsReceivedNotesRouter from "./goods-received-notes/goods-received-notes.router";
@@ -19,6 +20,9 @@ const createApp = () => {
       enabled: config.featureReceiving,
     });
   });
+
+  // Always available, flag or not: the contract is what other teams build against
+  mountDocs(app);
 
   // The whole module sits behind its phase flag: with the flag off the service still
   // runs and answers health checks, but exposes none of its routes.

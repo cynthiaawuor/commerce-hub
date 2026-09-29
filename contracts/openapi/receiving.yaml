@@ -1,0 +1,290 @@
+openapi: 3.1.0
+info:
+  title: Receiving Service
+  version: 1.0.0
+  description: |
+    The loading dock: which deliveries are expected, and what actually arrived.
+
+    Expected deliveries are not created through this API. They appear when Procurement
+    publishes `PurchaseOrderApproved`; see `contracts/events/purchase-order-approved.md`.
+    Recording a goods received note publishes `GoodsReceived` with the accepted units;
+    see `contracts/events/goods-received.md`.
+
+    Money is always **integer cents** (KES 1,250.50 is `125050`).
+
+    There is no auth service yet: the caller identifies itself with the `x-user-id` header.
+servers:
+  - url: http://localhost:3003/receiving-api
+    description: Local development
+
+tags:
+  - name: Expected deliveries
+  - name: Goods received notes
+  - name: Health
+
+components:
+  parameters:
+    UserId:
+      name: x-user-id
+      in: header
+      required: true
+      schema: { type: string }
+      description: Who is making the request (stands in for authentication)
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message: { type: string }
+            details:
+              type: object
+              description: Field name to messages, for example `products[0].quantityDamaged`
+              additionalProperties:
+                type: array
+                items: { type: string }
+
+    ExpectedProduct:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string }
+        productName: { type: string }
+        quantityOrdered: { type: integer }
+        quantityReceived:
+          type: integer
+          description: Accepted so far, across every note for this delivery
+        quantityOutstanding:
+          type: integer
+          description: What the clerk still expects, never below 0
+        unitCostCents: { type: integer }
+
+    ExpectedDelivery:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        purchaseOrderId: { type: string }
+        purchaseOrderNumber: { type: string, example: PO-000008 }
+        supplierId: { type: string }
+        supplierName: { type: string }
+        status:
+          type: string
+          enum: [OPEN, CLOSED]
+          description: Closes once every product has been received in full
+        products:
+          type: array
+          items: { $ref: '#/components/schemas/ExpectedProduct' }
+        createdAt: { type: string, format: date-time }
+
+    ReceivedProduct:
+      type: object
+      required: [productId, quantityDelivered]
+      properties:
+        productId: { type: string }
+        quantityDelivered:
+          type: integer
+          minimum: 0
+          description: Counted off the truck, damaged units included
+        quantityDamaged:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Cannot be more than `quantityDelivered`
+
+    CreateGoodsReceivedNote:
+      type: object
+      required: [expectedDeliveryId, products]
+      properties:
+        expectedDeliveryId: { type: string, format: uuid }
+        products:
+          type: array
+          minItems: 1
+          description: |
+            One entry per product. A product on the order that is left out is recorded
+            as delivered 0. A product not on the order is recorded and not accepted.
+          items: { $ref: '#/components/schemas/ReceivedProduct' }
+        locationCode:
+          type: string
+          maxLength: 20
+          description: Where the goods were taken in; defaults to `WH-MAIN`
+        notes: { type: string, maxLength: 1000 }
+
+    GoodsReceivedNoteProduct:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string }
+        productName: { type: string }
+        quantityExpected:
+          type: integer
+          description: What was still outstanding when the truck arrived
+        quantityDelivered: { type: integer }
+        quantityDamaged: { type: integer }
+        quantityAccepted:
+          type: integer
+          description: |
+            Delivered minus damaged, capped at what was expected. Only these units are
+            announced in `GoodsReceived` and reach stock.
+        discrepancy:
+          type: string
+          enum: [NONE, LESS, MORE, NOT_ORDERED]
+          description: |
+            `LESS`: fewer delivered than expected. `MORE`: more delivered than expected
+            (the extra is not accepted). `NOT_ORDERED`: the product is not on the order.
+        unitCostCents: { type: integer }
+
+    GoodsReceivedNote:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        goodsReceivedNoteNumber: { type: string, example: GRN-000001 }
+        expectedDeliveryId: { type: string, format: uuid }
+        purchaseOrderId: { type: string }
+        purchaseOrderNumber: { type: string }
+        supplierId: { type: string }
+        locationCode: { type: string }
+        receivedBy: { type: string }
+        notes: { type: [string, 'null'] }
+        products:
+          type: array
+          items: { $ref: '#/components/schemas/GoodsReceivedNoteProduct' }
+        createdAt: { type: string, format: date-time }
+
+  responses:
+    NotFound:
+      description: No record with this id
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Is the service up?
+      responses:
+        '200':
+          description: Service status and whether the module's feature flag is on
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  service: { type: string }
+                  enabled: { type: boolean }
+
+  /expected-deliveries:
+    get:
+      tags: [Expected deliveries]
+      summary: Deliveries the dock is waiting for
+      description: Open deliveries only, oldest order first.
+      responses:
+        '200':
+          description: Open deliveries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ExpectedDelivery' }
+
+  /expected-deliveries/{id}:
+    get:
+      tags: [Expected deliveries]
+      summary: One expected delivery, open or closed
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: The delivery
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ExpectedDelivery' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /goods-received-notes:
+    get:
+      tags: [Goods received notes]
+      summary: The 50 most recent notes, newest first
+      responses:
+        '200':
+          description: Recent notes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/GoodsReceivedNote' }
+    post:
+      tags: [Goods received notes]
+      summary: Record what arrived on a truck
+      description: |
+        Compares each product with what is outstanding, records the note, raises the
+        received quantities and closes the delivery once everything has arrived. If any
+        units were accepted, `GoodsReceived` is published.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateGoodsReceivedNote' }
+            example:
+              expectedDeliveryId: 3f1c2a9e-5b7d-4e1a-9c3b-2d8f6a0e4b71
+              products:
+                - { productId: PROD-1, quantityDelivered: 7, quantityDamaged: 1 }
+      responses:
+        '201':
+          description: Note recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/GoodsReceivedNote' }
+        '400':
+          description: |
+            Invalid body, missing `x-user-id`, more damaged than delivered, or the same
+            product listed twice
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The delivery is already closed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /goods-received-notes/{id}:
+    get:
+      tags: [Goods received notes]
+      summary: One note with its products
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: The note
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/GoodsReceivedNote' }
+        '404': { $ref: '#/components/responses/NotFound' }
