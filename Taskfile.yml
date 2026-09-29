@@ -27,7 +27,7 @@ tasks:
   dev:apps:
     internal: true
     # deps run at the same time, so every server stays in the foreground until Ctrl+C
-    deps: [dev:vendor, dev:procurement, dev:warehouse, dev:portal, dev:dashboard]
+    deps: [dev:vendor, dev:procurement, dev:warehouse, dev:portal, dev:dashboard, dev:warehouse-app]
 
   dev:vendor:
     desc: Run service-vendor in watch mode (http://localhost:3000)
@@ -65,6 +65,14 @@ tasks:
     desc: Run procurement-dashboard in watch mode (http://localhost:5174)
     dir: procurement-dashboard
     prefix: dashboard
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:warehouse-app:
+    desc: Run warehouse-floor-app in watch mode (http://localhost:5177)
+    dir: warehouse-floor-app
+    prefix: warehouse-app
     interactive: true
     cmds:
       - npm run dev
