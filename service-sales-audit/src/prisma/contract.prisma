@@ -1,0 +1,113 @@
+// ------------------------------------------------------
+// Sales Audit checks that the money in each register matches what Point of Sale says
+// it should hold. It never rings up sales and never touches the ledger.
+// saleNumber and cashierId are soft references to Point of Sale.
+// Money is integer cents.
+// ------------------------------------------------------
+
+// OPEN: sales are still coming in. CLOSED: counted, explained and signed off.
+enum RegisterDayStatus {
+    OPEN   = "OPEN"
+    CLOSED = "CLOSED"
+
+    @@type("pg/text@1")
+}
+
+// One register's trading day, built up from ItemSold events
+model RegisterDay {
+    id String @id @default(uuid())
+
+    storeCode    String
+    registerCode String
+    // The day the sales happened, e.g. "2026-09-30" (midnight to midnight UTC, as POS counts it)
+    businessDate String
+
+    status RegisterDayStatus @default(OPEN)
+
+    // What the register should hold: cash is net of change given
+    salesCount        Int @default(0)
+    expectedCashCents Int @default(0)
+    expectedCardCents Int @default(0)
+
+    // Filled in when the manager closes the day
+    countedCashCents Int?
+    countedCardCents Int?
+    // Counted minus expected: negative is short, positive is over
+    cashDifferenceCents Int?
+    cardDifferenceCents Int?
+    explanation         String?
+    closedBy            String?
+    closedAt            TimestamptzString?
+    // False when Point of Sale could not be reached to confirm the figures at close
+    checkedWithPos Boolean?
+
+    // Sales that arrived after the day was closed; each one means the close needs a second look
+    salesAfterClose Int @default(0)
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    sales RecordedSale[]
+
+    @@unique([registerCode, businessDate])
+    @@index([status])
+}
+
+// Each sale counted towards a day, so the figures can be traced back
+model RecordedSale {
+    id            String @id @default(uuid())
+    registerDayId String
+
+    saleNumber String @unique
+    cashierId  String
+    totalCents Int
+    cashCents  Int
+    cardCents  Int
+    soldAt     TimestamptzString
+
+    registerDay RegisterDay @relation(fields: [registerDayId], references: [id], onDelete: Cascade)
+}
+
+// ------------------------------------------------------
+// PENDING: waiting to be published (or waiting for its next retry)
+// PUBLISHED: RabbitMQ has confirmed it
+// DEAD: given up on; kept for inspection and manual retry, never silently deleted
+// ------------------------------------------------------
+enum OutboxEventStatus {
+    PENDING   = "PENDING"
+    PUBLISHED = "PUBLISHED"
+    DEAD      = "DEAD"
+
+    @@type("pg/text@1")
+}
+
+// Transactional outbox: DayClosed is written in the same transaction as the close,
+// so the two can never disagree. A worker publishes the rows afterwards.
+model OutboxEvent {
+    id String @id @default(uuid())
+
+    eventType   String
+    aggregateId String
+    payload     String
+
+    status      OutboxEventStatus  @default(PENDING)
+    publishedAt TimestamptzString?
+
+    attempts      Int                @default(0)
+    lastError     String?
+    nextAttemptAt TimestamptzString  @default(now())
+    deadAt        TimestamptzString?
+
+    createdAt TimestamptzString @default(now())
+
+    @@index([status, nextAttemptAt])
+}
+
+// Events already handled, so a redelivered ItemSold is counted once
+model ProcessedEvent {
+    // The eventId from the envelope
+    id        String @id
+    eventType String
+
+    handledAt TimestamptzString @default(now())
+}
