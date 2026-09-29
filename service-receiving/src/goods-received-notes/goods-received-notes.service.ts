@@ -33,6 +33,15 @@ const parseReceivedProducts = async (products: unknown[]) => {
       continue;
     }
 
+    // Each entry is checked against what is outstanding, so a product counted twice
+    // would be accepted twice. The clerk adds the counts up into one entry instead.
+    if (parsed.some((earlier) => earlier.productId === result.obj!.productId)) {
+      errors[`products[${index}].productId`] = [
+        "is already on this note; add the quantities into one entry",
+      ];
+      continue;
+    }
+
     const damaged = result.obj!.quantityDamaged ?? 0;
 
     if (damaged > result.obj!.quantityDelivered) {
