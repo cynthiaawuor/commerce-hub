@@ -8,6 +8,10 @@
       "model": "OutboxEvent",
       "namespace": "public"
     },
+    "processedEvent": {
+      "model": "ProcessedEvent",
+      "namespace": "public"
+    },
     "purchaseOrder": {
       "model": "PurchaseOrder",
       "namespace": "public"
@@ -227,6 +231,47 @@
               },
               "namespaceId": "public",
               "table": "outboxEvent"
+            }
+          },
+          "ProcessedEvent": {
+            "fields": {
+              "eventType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "handledAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "eventType": {
+                  "column": "eventType"
+                },
+                "handledAt": {
+                  "column": "handledAt"
+                },
+                "id": {
+                  "column": "id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "processedEvent"
             }
           },
           "PurchaseOrder": {
@@ -935,6 +980,37 @@
               },
               "uniques": []
             },
+            "processedEvent": {
+              "columns": {
+                "eventType": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "handledAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "purchaseOrder": {
               "checks": [
                 {
@@ -1414,7 +1490,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "7908adbc6b612e162ba7c7fc53e2f3ab4b81254dcaf88c1c4a84122e308d0888"
+    "storageHash": "35acbc927f05a792076593c970686c9418574b36739bd979153137ed1d7bc769"
   },
   "execution": {
     "executionHash": "fd61ea8ab8b373d170cb3ef1a4c3f58519eba6bafde32bbbaa076e68a1fbdb45",

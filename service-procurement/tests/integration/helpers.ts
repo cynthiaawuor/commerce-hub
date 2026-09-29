@@ -3,6 +3,7 @@ import { db } from "../../src/prisma/db";
 // Each test starts from a clean slate, so results never depend on what ran before.
 const resetDatabase = async () => {
   await db.orm.public.OutboxEvent.where((e) => e.id.isNotNull()).delete();
+  await db.orm.public.ProcessedEvent.where((e) => e.id.isNotNull()).delete();
   await db.orm.public.ReorderSuggestion.where((s) => s.id.isNotNull()).delete();
   // Lines and status history go with the order (onDelete: Cascade)
   await db.orm.public.PurchaseOrder.where((po) => po.id.isNotNull()).delete();
