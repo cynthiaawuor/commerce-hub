@@ -3,7 +3,11 @@ import { useState } from "react";
 import { Button } from "../components/ui/Button";
 import { EmptyState, ErrorState, LoadingState } from "../components/ui/States";
 import { config } from "../config/config";
-import { completeTask, getPendingTasks, getShelfLocations } from "../lib/warehouse-api";
+import {
+  completeTask,
+  getPendingTasks,
+  getShelfLocations,
+} from "../lib/warehouse-api";
 import type { PutawayTask, ShelfLocation } from "../types/warehouse";
 
 type Tab = "tasks" | "shelves";
@@ -21,13 +25,18 @@ export function FloorPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="bg-slate-900 px-4 pt-4 text-white">
-        <p className="text-lg font-semibold">Warehouse floor</p>
-        <p className="text-sm text-slate-400">Put received goods away</p>
+        <p className="text-lg font-semibold">Warehouse Management</p>
+        <p className="text-sm text-slate-400">
+          Put received goods in the warehouse
+        </p>
         <nav className="mt-3 flex gap-1">
           <TabButton active={tab === "tasks"} onClick={() => setTab("tasks")}>
-            To put away
+            Received Goods
           </TabButton>
-          <TabButton active={tab === "shelves"} onClick={() => setTab("shelves")}>
+          <TabButton
+            active={tab === "shelves"}
+            onClick={() => setTab("shelves")}
+          >
             Shelves
           </TabButton>
         </nav>
@@ -69,7 +78,11 @@ function TasksView() {
             {lastDone.quantity} × {lastDone.productName} put on{" "}
             <span className="font-semibold">{lastDone.shelfCode}</span>
           </span>
-          <button type="button" onClick={() => setLastDone(null)} className="font-medium">
+          <button
+            type="button"
+            onClick={() => setLastDone(null)}
+            className="font-medium"
+          >
             OK
           </button>
         </div>
@@ -88,7 +101,7 @@ function TasksView() {
         />
       ) : tasks.data.length === 0 ? (
         <EmptyState
-          title="Nothing to put away"
+          title="No received goods"
           message="Tasks appear here once goods are received at the dock."
         />
       ) : (
@@ -128,7 +141,10 @@ function PutAwayForm({
   onDone: (task: PutawayTask) => void;
 }) {
   const queryClient = useQueryClient();
-  const shelves = useQuery({ queryKey: ["shelves"], queryFn: getShelfLocations });
+  const shelves = useQuery({
+    queryKey: ["shelves"],
+    queryFn: getShelfLocations,
+  });
   // Start on the suggestion: the worker only changes it when the shelf is not usable
   const [shelfCode, setShelfCode] = useState(task.suggestedShelfCode ?? "");
 
@@ -165,10 +181,14 @@ function PutAwayForm({
 
       <div className="mb-4 rounded-lg bg-slate-100 p-4 text-center">
         <p className="text-sm text-slate-600">
-          {task.suggestedShelfCode ? "Put it on shelf" : "No shelf had room. Choose one below."}
+          {task.suggestedShelfCode
+            ? "Put it on shelf"
+            : "No shelf had room. Choose one below."}
         </p>
         {task.suggestedShelfCode && (
-          <p className="text-4xl font-bold tracking-wide">{task.suggestedShelfCode}</p>
+          <p className="text-4xl font-bold tracking-wide">
+            {task.suggestedShelfCode}
+          </p>
         )}
       </div>
 
@@ -192,7 +212,10 @@ function PutAwayForm({
       </label>
 
       {confirm.isError && (
-        <p role="alert" className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+        <p
+          role="alert"
+          className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700"
+        >
           {confirm.error.message}
         </p>
       )}
@@ -209,7 +232,10 @@ function PutAwayForm({
 }
 
 function ShelvesView() {
-  const shelves = useQuery({ queryKey: ["shelves"], queryFn: getShelfLocations });
+  const shelves = useQuery({
+    queryKey: ["shelves"],
+    queryFn: getShelfLocations,
+  });
 
   if (shelves.isPending) {
     return <LoadingState label="Loading shelves…" />;
@@ -247,9 +273,15 @@ function ShelvesView() {
 }
 
 function ShelfCard({ shelf }: { shelf: ShelfLocation }) {
-  const percentFull = Math.round((shelf.occupiedUnits / shelf.capacityUnits) * 100);
+  const percentFull = Math.round(
+    (shelf.occupiedUnits / shelf.capacityUnits) * 100,
+  );
   const barColour =
-    percentFull >= 90 ? "bg-red-500" : percentFull >= 60 ? "bg-amber-500" : "bg-green-500";
+    percentFull >= 90
+      ? "bg-red-500"
+      : percentFull >= 60
+        ? "bg-amber-500"
+        : "bg-green-500";
 
   return (
     <li className="rounded-lg border border-slate-200 bg-white p-4">
@@ -268,10 +300,14 @@ function ShelfCard({ shelf }: { shelf: ShelfLocation }) {
         aria-valuemax={100}
         aria-label={`${shelf.code} is ${percentFull}% full`}
       >
-        <div className={`h-full ${barColour}`} style={{ width: `${percentFull}%` }} />
+        <div
+          className={`h-full ${barColour}`}
+          style={{ width: `${percentFull}%` }}
+        />
       </div>
       <p className="mt-1 text-sm text-slate-600">
-        {shelf.occupiedUnits} of {shelf.capacityUnits} used · room for {shelf.freeUnits}
+        {shelf.occupiedUnits} of {shelf.capacityUnits} used · room for{" "}
+        {shelf.freeUnits}
       </p>
 
       {shelf.products.length > 0 && (
@@ -315,7 +351,9 @@ function TabButton({
       onClick={onClick}
       aria-pressed={active}
       className={`rounded-t-md px-4 py-2.5 text-sm font-medium ${
-        active ? "bg-slate-50 text-slate-900" : "text-slate-300 hover:text-white"
+        active
+          ? "bg-slate-50 text-slate-900"
+          : "text-slate-300 hover:text-white"
       }`}
     >
       {children}
@@ -328,7 +366,9 @@ function ComingSoon() {
     <div className="grid min-h-screen place-items-center bg-slate-50 p-4">
       <div className="rounded-lg border border-dashed border-slate-300 bg-white p-12 text-center">
         <h1 className="text-xl font-semibold">Coming soon</h1>
-        <p className="mt-2 text-sm text-slate-500">Warehouse operations are not enabled here.</p>
+        <p className="mt-2 text-sm text-slate-500">
+          Warehouse operations are not enabled here.
+        </p>
       </div>
     </div>
   );
