@@ -45,7 +45,8 @@ time. A subscriber that is down misses nothing, because its queue holds the mess
 | Procurement | [`service-procurement/`](service-procurement) | Purchase orders, approvals, receipts | 1 | Built |
 | Procurement Dashboard | `procurement-dashboard/` | Buyer UI for orders and approvals | 1 | In progress |
 | Inventory | — | Stock levels, valuation, `StockLow` | 1 | Not started |
-| Receiving | — | Goods received notes | 2 | Not started |
+| Receiving | [`service-receiving/`](service-receiving) | Expected deliveries, goods received notes, `GoodsReceived` | 2 | Built (MVP) |
+| Receiving App | [`receiving-app/`](receiving-app) | Dock clerk UI: count a delivery against its order | 2 | Built (MVP) |
 | Warehouse Operations | — | Putaway, picking, transfers | 2 | Not started |
 | Retail Sales (POS) | — | Sales and returns | 3 | Not started |
 | Sales Audit | — | Cash reconciliation | 3 | Not started |
@@ -64,7 +65,9 @@ task dev          # all services and frontends in watch mode
 | --- | --- |
 | Vendor API | http://localhost:3000/vendor-api |
 | Procurement API | http://localhost:3001/procurement-api |
+| Receiving API | http://localhost:3003/receiving-api |
 | Vendor Portal | http://localhost:5173 |
+| Receiving App | http://localhost:5176 |
 | RabbitMQ management | http://localhost:15672 (guest / guest) |
 
 First time in each service directory: `cp .env.example .env`, then `npm install` and
@@ -80,6 +83,8 @@ Each service reads its own flag; the frontends read theirs at build time.
 | Flag | Where | Effect when off |
 | --- | --- | --- |
 | `FEATURE_PROCUREMENT` | `service-procurement/.env` | Routes are not mounted and events are not consumed; health still answers |
+| `FEATURE_RECEIVING` | `service-receiving/.env` | Routes are not mounted and events are not consumed; health still answers |
+| `VITE_FEATURE_RECEIVING` | `receiving-app/.env` | The app shows "Coming soon" |
 | `VITE_FEATURE_VENDOR_MANAGEMENT` | `vendor-portal/.env` | The portal shows "Coming soon" and hides its menu |
 
 Set a flag to `false` to hide a module without removing it.
@@ -91,6 +96,9 @@ in [`contracts/events/`](contracts/events), so a service's contract is readable 
 reading its code.
 
 - Procurement, live: http://localhost:3001/procurement-api/docs
+- Receiving, live: http://localhost:3003/receiving-api/docs
+- `PurchaseOrderApproved` event: [`contracts/events/purchase-order-approved.md`](contracts/events/purchase-order-approved.md)
+- `GoodsReceived` event: [`contracts/events/goods-received.md`](contracts/events/goods-received.md)
 - `StockLow` event: [`contracts/events/stock-low.md`](contracts/events/stock-low.md)
 
 ## Testing
@@ -102,8 +110,11 @@ npm run test:integration   # real HTTP + real database, Vendor faked
 npm test                   # both
 ```
 
+Receiving works the same way (`cd service-receiving`): unit tests cover the discrepancy
+rules, integration tests the events and goods received notes.
+
 Integration tests create and migrate their own database
-(`service-procurement-test`), so they never touch development data. The same commands run
+(`service-procurement-test`, `service-receiving-test`), so they never touch development data. The same commands run
 in CI on every pull request; see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## Conventions
@@ -115,3 +126,9 @@ in CI on every pull request; see [`.github/workflows/ci.yml`](.github/workflows/
   because that table lives in another database.
 - **Prices and terms are frozen** onto a purchase order when it is created, so an order
   always reflects what was agreed on the day.
+
+## Known limitations
+
+- **Receiving:** two clerks recording notes for the same delivery at the same moment could
+  undercount what was received, because each reads the running total before adding to it.
+  With one clerk per delivery this does not happen; a row lock would fix it.
