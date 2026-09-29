@@ -12,7 +12,7 @@ model ShelfLocation {
     // The area of the warehouse, e.g. "A" for the racks by the dock
     zone String
 
-    // How far a worker walks from the dock; nearer shelves are suggested first
+    // Metres a worker walks from the dock; nearer shelves are suggested first
     distanceFromDock Int
 
     // Measured in units for the MVP, not volume or weight
