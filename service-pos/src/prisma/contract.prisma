@@ -1,0 +1,142 @@
+// ------------------------------------------------------
+// Point of Sale records what was sold, at what price and how it was paid.
+// It never counts stock: Inventory does, and the till reserves and sells through it.
+// productId and reservationId are soft references to Inventory.
+// Money is integer cents, and shelf prices include VAT.
+// ------------------------------------------------------
+
+// A product the till can sell, at its shelf price
+model ProductPrice {
+    id String @id @default(uuid())
+
+    productId   String @unique
+    sku         String @unique
+    productName String
+
+    priceCents Int
+    updatedBy  String
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    @@check(expression: "\"priceCents\" > 0", name: "product_price_positive")
+}
+
+// OPEN: the cashier is scanning. COMPLETED: paid, stock has left.
+// CANCELLED: abandoned, every reservation given back.
+enum SaleStatus {
+    OPEN      = "OPEN"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+    @@type("pg/text@1")
+}
+
+model Sale {
+    id         String @id @default(uuid())
+    saleNumber String @unique
+
+    storeCode    String
+    registerCode String
+    cashierId    String
+
+    status SaleStatus @default(OPEN)
+
+    // Kept up to date as products are scanned, so the till always shows the total
+    totalCents Int @default(0)
+    // The VAT inside totalCents
+    taxCents   Int @default(0)
+    // Set when paid; change is only ever given from cash
+    paidCents   Int @default(0)
+    changeCents Int @default(0)
+
+    completedAt TimestamptzString?
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    products SaleProduct[]
+    payments Payment[]
+
+    @@index([registerCode, status])
+}
+
+// One scan on the sale. The price is frozen when scanned, so a price change mid-sale
+// never changes what the customer was shown.
+model SaleProduct {
+    id     String @id @default(uuid())
+    saleId String
+
+    productId   String
+    sku         String
+    productName String
+
+    quantity       Int
+    unitPriceCents Int
+    totalCents     Int
+
+    // Inventory's hold on this stock while the customer pays
+    reservationId String
+    // Set once Inventory has taken the stock, so a retried payment never sells it twice
+    committedAt TimestamptzString?
+
+    // Scan order, so the receipt lists products as they were rung up
+    createdAt TimestamptzString @default(now())
+
+    sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+}
+
+enum PaymentMethod {
+    CASH = "CASH"
+    CARD = "CARD"
+
+    @@type("pg/text@1")
+}
+
+// A sale can be split, e.g. part cash and part card
+model Payment {
+    id     String @id @default(uuid())
+    saleId String
+
+    method      PaymentMethod
+    amountCents Int
+
+    createdAt TimestamptzString @default(now())
+
+    sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+}
+
+// ------------------------------------------------------
+// PENDING: waiting to be published (or waiting for its next retry)
+// PUBLISHED: RabbitMQ has confirmed it
+// DEAD: given up on; kept for inspection and manual retry, never silently deleted
+// ------------------------------------------------------
+enum OutboxEventStatus {
+    PENDING   = "PENDING"
+    PUBLISHED = "PUBLISHED"
+    DEAD      = "DEAD"
+
+    @@type("pg/text@1")
+}
+
+// Transactional outbox: ItemSold is written in the same transaction as the completed
+// sale, so the two can never disagree. A worker publishes the rows afterwards.
+model OutboxEvent {
+    id String @id @default(uuid())
+
+    eventType   String
+    aggregateId String
+    payload     String
+
+    status      OutboxEventStatus  @default(PENDING)
+    publishedAt TimestamptzString?
+
+    attempts      Int                @default(0)
+    lastError     String?
+    nextAttemptAt TimestamptzString  @default(now())
+    deadAt        TimestamptzString?
+
+    createdAt TimestamptzString @default(now())
+
+    @@index([status, nextAttemptAt])
+}
