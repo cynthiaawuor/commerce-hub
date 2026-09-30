@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 
-version: '3'
+version: "3"
 
 # Label each line of output with the task it came from, so the dev servers
 # running side by side stay readable.
@@ -8,7 +8,7 @@ output: prefixed
 
 vars:
   # Each service owns a private database, so there is one container per service
-  POSTGRES_CONTAINERS: commerce_postgres procurement_postgres sales_audit_postgres
+  POSTGRES_CONTAINERS: commerce_postgres procurement_postgres inventory_postgres receiving_postgres warehouse_postgres sales_audit_postgres
   RABBITMQ_CONTAINER: commerce_rabbitmq
 
 tasks:
@@ -19,7 +19,7 @@ tasks:
     silent: true
 
   dev:
-    desc: Start the databases and broker, then the vendor API, procurement API and portal (watch mode)
+    desc: Start the databases and broker, then every service and app (watch mode)
     deps: [infra:up]
     cmds:
       - task: dev:apps
@@ -27,7 +27,21 @@ tasks:
   dev:apps:
     internal: true
     # deps run at the same time, so every server stays in the foreground until Ctrl+C
-    deps: [dev:vendor, dev:procurement, dev:sales-audit, dev:portal, dev:dashboard, dev:sales-audit-app]
+    deps:
+      [
+        dev:vendor,
+        dev:procurement,
+        dev:inventory,
+        dev:receiving,
+        dev:warehouse,
+        dev:sales-audit,
+        dev:portal,
+        dev:dashboard,
+        dev:control-center,
+        dev:receiving-app,
+        dev:warehouse-app,
+        dev:sales-audit-app,
+      ]
 
   dev:vendor:
     desc: Run service-vendor in watch mode (http://localhost:3000)
@@ -41,6 +55,38 @@ tasks:
     desc: Run service-procurement in watch mode (http://localhost:3001)
     dir: service-procurement
     prefix: procurement
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:inventory:
+    desc: Run service-inventory in watch mode (http://localhost:3002)
+    dir: service-inventory
+    prefix: inventory
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:receiving:
+    desc: Run service-receiving in watch mode (http://localhost:3003)
+    dir: service-receiving
+    prefix: receiving
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:receiving-app:
+    desc: Run receiving-app in watch mode (http://localhost:5176)
+    dir: receiving-app
+    prefix: receiving-app
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:warehouse:
+    desc: Run service-warehouse in watch mode (http://localhost:3004)
+    dir: service-warehouse
+    prefix: warehouse
     interactive: true
     cmds:
       - npm run dev
@@ -65,6 +111,22 @@ tasks:
     desc: Run procurement-dashboard in watch mode (http://localhost:5174)
     dir: procurement-dashboard
     prefix: dashboard
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:control-center:
+    desc: Run inventory-control-center in watch mode (http://localhost:5175)
+    dir: inventory-control-center
+    prefix: control-center
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:warehouse-app:
+    desc: Run warehouse-floor-app in watch mode (http://localhost:5177)
+    dir: warehouse-floor-app
+    prefix: warehouse-app
     interactive: true
     cmds:
       - npm run dev

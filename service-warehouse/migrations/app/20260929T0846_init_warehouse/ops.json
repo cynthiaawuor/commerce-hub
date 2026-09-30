@@ -1,0 +1,421 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.processedEvent",
+    "label": "Create table \"processedEvent\"",
+    "summary": "Creates table \"processedEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "processedEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"processedEvent\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"processedEvent\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"processedEvent\"",
+        "sql": "CREATE TABLE \"public\".\"processedEvent\" (\n  \"eventType\" text NOT NULL,\n  \"handledAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"processedEvent\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"processedEvent\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.putawayTask",
+    "label": "Create table \"putawayTask\"",
+    "summary": "Creates table \"putawayTask\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "putawayTask"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"putawayTask\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"putawayTask\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"putawayTask\"",
+        "sql": "CREATE TABLE \"public\".\"putawayTask\" (\n  \"completedAt\" timestamptz,\n  \"completedBy\" text,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"goodsReceivedNoteNumber\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"productId\" text NOT NULL,\n  \"productName\" text NOT NULL,\n  \"purchaseOrderNumber\" text NOT NULL,\n  \"quantity\" int4 NOT NULL,\n  \"shelfCode\" text,\n  \"status\" text DEFAULT 'PENDING' NOT NULL,\n  \"suggestedShelfCode\" text,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"putawayTask_status_check_c62c2a0e\" CHECK (\"status\" IN ('PENDING', 'COMPLETED'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"putawayTask\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"putawayTask\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.shelfLocation",
+    "label": "Create table \"shelfLocation\"",
+    "summary": "Creates table \"shelfLocation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "shelfLocation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"shelfLocation\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"shelfLocation\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"shelfLocation\"",
+        "sql": "CREATE TABLE \"public\".\"shelfLocation\" (\n  \"capacityUnits\" int4 NOT NULL,\n  \"code\" text NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"distanceFromDock\" int4 NOT NULL,\n  \"id\" text NOT NULL,\n  \"occupiedUnits\" int4 DEFAULT 0 NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"zone\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"shelf_location_within_capacity_f688a2b1\" CHECK (\"occupiedUnits\" >= 0 AND \"occupiedUnits\" <= \"capacityUnits\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"shelfLocation\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"shelfLocation\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.shelfProduct",
+    "label": "Create table \"shelfProduct\"",
+    "summary": "Creates table \"shelfProduct\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "shelfProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"shelfProduct\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"shelfProduct\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"shelfProduct\"",
+        "sql": "CREATE TABLE \"public\".\"shelfProduct\" (\n  \"id\" text NOT NULL,\n  \"productId\" text NOT NULL,\n  \"productName\" text NOT NULL,\n  \"quantity\" int4 NOT NULL,\n  \"shelfLocationId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"shelfProduct\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"shelfProduct\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.putawayTask.putawayTask_goodsReceivedNoteNumber_productId_key",
+    "label": "Add unique constraint on \"putawayTask\" (goodsReceivedNoteNumber, productId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "putawayTask_goodsReceivedNoteNumber_productId_key",
+        "table": "putawayTask"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"putawayTask_goodsReceivedNoteNumber_productId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "putawayTask_goodsReceivedNoteNumber_productId_key",
+          "public",
+          "\"public\".\"putawayTask\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"putawayTask_goodsReceivedNoteNumber_productId_key\"",
+        "sql": "ALTER TABLE \"public\".\"putawayTask\" ADD CONSTRAINT \"putawayTask_goodsReceivedNoteNumber_productId_key\" UNIQUE (\"goodsReceivedNoteNumber\", \"productId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"putawayTask_goodsReceivedNoteNumber_productId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "putawayTask_goodsReceivedNoteNumber_productId_key",
+          "public",
+          "\"public\".\"putawayTask\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.shelfLocation.shelfLocation_code_key",
+    "label": "Add unique constraint on \"shelfLocation\" (code)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "shelfLocation_code_key",
+        "table": "shelfLocation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"shelfLocation_code_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "shelfLocation_code_key",
+          "public",
+          "\"public\".\"shelfLocation\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"shelfLocation_code_key\"",
+        "sql": "ALTER TABLE \"public\".\"shelfLocation\" ADD CONSTRAINT \"shelfLocation_code_key\" UNIQUE (\"code\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"shelfLocation_code_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "shelfLocation_code_key",
+          "public",
+          "\"public\".\"shelfLocation\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.shelfProduct.shelfProduct_shelfLocationId_productId_key",
+    "label": "Add unique constraint on \"shelfProduct\" (shelfLocationId, productId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "shelfProduct_shelfLocationId_productId_key",
+        "table": "shelfProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"shelfProduct_shelfLocationId_productId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "shelfProduct_shelfLocationId_productId_key",
+          "public",
+          "\"public\".\"shelfProduct\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"shelfProduct_shelfLocationId_productId_key\"",
+        "sql": "ALTER TABLE \"public\".\"shelfProduct\" ADD CONSTRAINT \"shelfProduct_shelfLocationId_productId_key\" UNIQUE (\"shelfLocationId\", \"productId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"shelfProduct_shelfLocationId_productId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "shelfProduct_shelfLocationId_productId_key",
+          "public",
+          "\"public\".\"shelfProduct\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.putawayTask.putawayTask_status_idx_e98638ab",
+    "label": "Create index \"putawayTask_status_idx_e98638ab\" on \"putawayTask\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "putawayTask_status_idx_e98638ab",
+        "table": "putawayTask"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"putawayTask_status_idx_e98638ab\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"putawayTask_status_idx_e98638ab\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"putawayTask_status_idx_e98638ab\"",
+        "sql": "CREATE INDEX \"putawayTask_status_idx_e98638ab\" ON \"public\".\"putawayTask\" (\"status\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"putawayTask_status_idx_e98638ab\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"putawayTask_status_idx_e98638ab\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.shelfProduct.shelfProduct_shelfLocationId_idx_33ce421c",
+    "label": "Create index \"shelfProduct_shelfLocationId_idx_33ce421c\" on \"shelfProduct\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "shelfProduct_shelfLocationId_idx_33ce421c",
+        "table": "shelfProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"shelfProduct_shelfLocationId_idx_33ce421c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"shelfProduct_shelfLocationId_idx_33ce421c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"shelfProduct_shelfLocationId_idx_33ce421c\"",
+        "sql": "CREATE INDEX \"shelfProduct_shelfLocationId_idx_33ce421c\" ON \"public\".\"shelfProduct\" (\"shelfLocationId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"shelfProduct_shelfLocationId_idx_33ce421c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"shelfProduct_shelfLocationId_idx_33ce421c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.shelfProduct.shelfProduct_shelfLocationId_fkey",
+    "label": "Add foreign key \"shelfProduct_shelfLocationId_fkey\" on \"shelfProduct\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "shelfProduct_shelfLocationId_fkey",
+        "table": "shelfProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"shelfProduct_shelfLocationId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "shelfProduct_shelfLocationId_fkey",
+          "public",
+          "\"public\".\"shelfProduct\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"shelfProduct_shelfLocationId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"shelfProduct\"\nADD CONSTRAINT \"shelfProduct_shelfLocationId_fkey\"\nFOREIGN KEY (\"shelfLocationId\")\nREFERENCES \"public\".\"shelfLocation\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"shelfProduct_shelfLocationId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "shelfProduct_shelfLocationId_fkey",
+          "public",
+          "\"public\".\"shelfProduct\""
+        ]
+      }
+    ]
+  }
+]

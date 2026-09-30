@@ -165,3 +165,13 @@ model ReorderSuggestion {
 
     @@unique([productId, locationId])
 }
+
+// Events already handled, so a redelivered GoodsReceived cannot count the same goods
+// twice. Written in the same transaction as the receipt it caused.
+model ProcessedEvent {
+    // The eventId from the envelope
+    id        String @id
+    eventType String
+
+    handledAt TimestamptzString @default(now())
+}

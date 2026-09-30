@@ -304,7 +304,7 @@ const approvePurchaseOrder = async (id: string, user: CurrentUser) => {
   const order = await purchaseOrderRepository.findById(id);
   const payload: PurchaseOrderApprovedPayload = {
     purchaseOrderId: purchaseOrder.id,
-    poNumber: purchaseOrder.poNumber,
+    purchaseOrderNumber: purchaseOrder.poNumber,
     supplierId: order!.supplierId,
     supplierName: order!.supplierName,
     paymentTerms: order!.paymentTerms,
@@ -312,7 +312,7 @@ const approvePurchaseOrder = async (id: string, user: CurrentUser) => {
     totalCents: Number(purchaseOrder.totalCents),
     approvedBy: user.id,
     approvedAt,
-    lines: order!.lines.map((line) => ({
+    products: order!.lines.map((line) => ({
       productId: line.productId,
       productName: line.productName,
       quantityOrdered: line.quantityOrdered,
@@ -437,6 +437,20 @@ const receivePurchaseOrder = async (
 
   const receiptLines = await parseReceiptLines(obj!.lines);
 
+  return applyReceipt(id, receiptLines, user.id, obj!.reference ?? null);
+};
+
+type ReceiptLine = { productId: string; quantityReceived: number };
+
+// The rules for booking a delivery, shared by the REST endpoint and the GoodsReceived
+// event so the two can never disagree about what a receipt does to an order.
+const applyReceipt = async (
+  id: string,
+  receiptLines: ReceiptLine[],
+  changedBy: string,
+  reference: string | null,
+  claim?: { eventId: string; eventType: string } | undefined,
+) => {
   const purchaseOrder = await purchaseOrderRepository.findById(id);
 
   if (!purchaseOrder) {
@@ -499,9 +513,43 @@ const receivePurchaseOrder = async (
       : {
           fromStatus: purchaseOrder.status,
           toStatus,
-          changedBy: user.id,
-          reason: obj!.reference ? `Delivery ${obj!.reference}` : null,
+          changedBy,
+          reason: reference ? `Delivery ${reference}` : null,
         },
+    claim,
+  );
+};
+
+// Who the audit trail credits when Receiving, not a person, moves an order
+const RECEIVING_SERVICE: CurrentUser = { id: "receiving-service", role: "SYSTEM" };
+
+// Receiving has checked a truck against this order. Goods at the dock prove the order
+// reached the supplier, so one still marked APPROVED is marked sent first rather than
+// the delivery being refused over a button nobody pressed.
+//
+// Returns null when this event was already handled.
+const receiveFromGoodsReceivedNote = async (
+  purchaseOrderId: string,
+  products: ReceiptLine[],
+  goodsReceivedNoteNumber: string,
+  claim: { eventId: string; eventType: string },
+) => {
+  const purchaseOrder = await purchaseOrderRepository.findSummaryById(purchaseOrderId);
+
+  if (!purchaseOrder) {
+    throw new NotFoundError(`Purchase order with ID ${purchaseOrderId} not found`);
+  }
+
+  if (purchaseOrder.status === "APPROVED") {
+    await sendPurchaseOrder(purchaseOrderId, RECEIVING_SERVICE);
+  }
+
+  return applyReceipt(
+    purchaseOrderId,
+    products,
+    RECEIVING_SERVICE.id,
+    goodsReceivedNoteNumber,
+    claim,
   );
 };
 
@@ -523,6 +571,7 @@ export {
   getPurchaseOrderHistory,
   listOpenPurchaseOrders,
   listPurchaseOrders,
+  receiveFromGoodsReceivedNote,
   receivePurchaseOrder,
   rejectPurchaseOrder,
   removePurchaseOrderLine,
