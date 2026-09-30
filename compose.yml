@@ -24,6 +24,19 @@ services:
     networks:
       - procurement_network
 
+  # Inventory's private database, on its own network so no other service can reach it
+  inventory-db:
+    image: postgres:18
+    container_name: inventory_postgres
+    environment:
+      POSTGRES_DB: service-inventory
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5436:5432'
+    networks:
+      - inventory_network
+
   # Event bus. Every service publishes domain events here; subscribers read at their own
   # pace, and a durable queue holds messages while a subscriber is down.
   rabbitmq:
@@ -50,3 +63,4 @@ networks:
   vendor_network: {}
   procurement_network: {}
   events_network: {}
+  inventory_network: {}
