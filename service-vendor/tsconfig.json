@@ -46,5 +46,6 @@
 
     // class-validator / class-transformer use legacy decorators
     "experimentalDecorators": true
-  }
+  },
+  "include": ["src", "prisma.config.ts"]
 }
