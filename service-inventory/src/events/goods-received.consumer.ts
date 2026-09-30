@@ -17,21 +17,21 @@ const isCount = (value: unknown): value is number =>
 const parsePayload = (payload: unknown): GoodsReceivedPayload => {
   const candidate = payload as Partial<GoodsReceivedPayload> | null;
 
-  const linesLookRight =
-    Array.isArray(candidate?.lines) &&
-    candidate.lines.length > 0 &&
-    candidate.lines.every(
-      (line) =>
-        isText(line?.productId) &&
-        isCount(line?.quantityReceived) &&
-        isCount(line?.unitCostCents),
+  const productsLookRight =
+    Array.isArray(candidate?.products) &&
+    candidate.products.length > 0 &&
+    candidate.products.every(
+      (product) =>
+        isText(product?.productId) &&
+        isCount(product?.quantityReceived) &&
+        isCount(product?.unitCostCents),
     );
 
   if (
     !candidate ||
-    !isText(candidate.grnId) ||
+    !isText(candidate.goodsReceivedNoteNumber) ||
     !isText(candidate.locationId) ||
-    !linesLookRight
+    !productsLookRight
   ) {
     throw new PermanentEventError(
       "GoodsReceived payload does not match contracts/events/goods-received.md",
@@ -48,11 +48,11 @@ const handleGoodsReceived = async (envelope: EventEnvelope) => {
   const locationId = await findLocationId(payload.locationId);
 
   const lines = [];
-  for (const line of payload.lines) {
+  for (const product of payload.products) {
     lines.push({
-      productId: await findProductId(line.productId),
-      quantity: line.quantityReceived,
-      unitCostCents: line.unitCostCents,
+      productId: await findProductId(product.productId),
+      quantity: product.quantityReceived,
+      unitCostCents: product.unitCostCents,
     });
   }
 
@@ -60,14 +60,14 @@ const handleGoodsReceived = async (envelope: EventEnvelope) => {
     envelope.eventId,
     envelope.eventType,
     locationId,
-    payload.grnId,
+    payload.goodsReceivedNoteNumber,
     "receiving-service",
     lines,
   );
 
   console.log(
     applied
-      ? `Received ${payload.grnId}: ${lines.length} line(s) into stock`
+      ? `Received ${payload.goodsReceivedNoteNumber}: ${lines.length} line(s) into stock`
       : `Ignored a repeat delivery of ${envelope.eventType} ${envelope.eventId}`,
   );
 };

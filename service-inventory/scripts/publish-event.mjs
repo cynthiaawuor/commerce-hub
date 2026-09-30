@@ -31,11 +31,12 @@ const events = {
     eventType: "GoodsReceived",
     routingKey: "receiving.goods-received",
     payload: {
-      grnId: reference,
-      purchaseOrderId: "PO-000999",
+      goodsReceivedNoteNumber: reference,
+      purchaseOrderId: randomUUID(),
+      purchaseOrderNumber: "PO-000999",
       locationId: location,
       receivedAt: new Date().toISOString(),
-      lines: [{
+      products: [{
         productId: product,
         quantityReceived: Number(quantity),
         unitCostCents: Number(unitCostCents),

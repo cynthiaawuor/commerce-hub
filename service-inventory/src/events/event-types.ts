@@ -28,11 +28,12 @@ type PurchaseOrderApprovedPayload = {
 
 // Consumed: Receiving announces goods taken into the business
 type GoodsReceivedPayload = {
-  grnId: string;
+  goodsReceivedNoteNumber: string;
   purchaseOrderId: string;
+  purchaseOrderNumber: string;
   locationId: string;
   receivedAt: string;
-  lines: {
+  products: {
     productId: string;
     quantityReceived: number;
     unitCostCents: number;

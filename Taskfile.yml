@@ -8,7 +8,7 @@ output: prefixed
 
 vars:
   # Each service owns a private database, so there is one container per service
-  POSTGRES_CONTAINERS: commerce_postgres procurement_postgres inventory_postgres
+  POSTGRES_CONTAINERS: commerce_postgres procurement_postgres inventory_postgres receiving_postgres
   RABBITMQ_CONTAINER: commerce_rabbitmq
 
 tasks:
@@ -19,7 +19,7 @@ tasks:
     silent: true
 
   dev:
-    desc: Start the databases and broker, then the vendor API, procurement API and portal (watch mode)
+    desc: Start the databases and broker, then every service and app (watch mode)
     deps: [infra:up]
     cmds:
       - task: dev:apps
@@ -32,9 +32,11 @@ tasks:
         dev:vendor,
         dev:procurement,
         dev:inventory,
+        dev:receiving,
         dev:portal,
         dev:dashboard,
         dev:control-center,
+        dev:receiving-app,
       ]
 
   dev:vendor:
@@ -57,6 +59,22 @@ tasks:
     desc: Run service-inventory in watch mode (http://localhost:3002)
     dir: service-inventory
     prefix: inventory
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:receiving:
+    desc: Run service-receiving in watch mode (http://localhost:3003)
+    dir: service-receiving
+    prefix: receiving
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:receiving-app:
+    desc: Run receiving-app in watch mode (http://localhost:5176)
+    dir: receiving-app
+    prefix: receiving-app
     interactive: true
     cmds:
       - npm run dev
