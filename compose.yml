@@ -50,6 +50,19 @@ services:
     networks:
       - receiving_network
 
+  # Warehouse Operations' private database, on its own network like the others
+  warehouse-db:
+    image: postgres:18
+    container_name: warehouse_postgres
+    environment:
+      POSTGRES_DB: service-warehouse
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5438:5432'
+    networks:
+      - warehouse_network
+
   # Event bus. Every service publishes domain events here; subscribers read at their own
   # pace, and a durable queue holds messages while a subscriber is down.
   rabbitmq:
@@ -74,6 +87,7 @@ services:
 networks:
   vendor_network: {}
   procurement_network: {}
+  warehouse_network: {}
   events_network: {}
   inventory_network: {}
   receiving_network: {}
