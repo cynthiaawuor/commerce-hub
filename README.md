@@ -46,13 +46,14 @@ time. A subscriber that is down misses nothing, because its queue holds the mess
 
 ## Modules
 
-| Module | Path | Purpose | Phase | Status |
-| --- | --- | --- | --- | --- |
-| Vendor Management | [`service-vendor/`](service-vendor) | Approved suppliers, their terms and catalogs | 1 | Built |
-| Vendor Portal | [`vendor-portal/`](vendor-portal) | Back-office UI for suppliers and catalogs | 1 | Built |
-| Procurement | [`service-procurement/`](service-procurement) | Purchase orders, approvals, receipts | 1 | Built |
-| Procurement Dashboard | `procurement-dashboard/` | Buyer UI for orders and approvals | 1 | In progress |
+| Module            | Path                                          | Purpose                                      | Phase | Status |
+| ----------------- | --------------------------------------------- | -------------------------------------------- | ----- | ------ |
+| Vendor Management | [`service-vendor/`](service-vendor)           | Approved suppliers, their terms and catalogs | 1     | Built  |
+| Vendor Portal     | [`vendor-portal/`](vendor-portal)             | Back-office UI for suppliers and catalogs    | 1     | Built  |
+| Procurement       | [`service-procurement/`](service-procurement) | Purchase orders, approvals, receipts         | 1     | Built  |
+| Procurement Dashboard | [`procurement-dashboard/`](procurement-dashboard) | Buyer UI for orders and approvals | 1 | Built |
 | Inventory | [`service-inventory/`](service-inventory) | Product master, stock levels, reservations, valuation | 1 | Built |
+| Inventory Control Center | [`inventory-control-center/`](inventory-control-center) | Stock, products, locations and valuation UI | 1 | Built |
 | Receiving | — | Goods received notes | 2 | Not started |
 | Warehouse Operations | — | Putaway, picking, transfers | 2 | Not started |
 | Retail Sales (POS) | — | Sales and returns | 3 | Not started |
@@ -68,13 +69,15 @@ task infra:up     # Postgres per service + RabbitMQ, waits until each is ready
 task dev          # all services and frontends in watch mode
 ```
 
-| Service | URL |
-| --- | --- |
-| Vendor API | http://localhost:3000/vendor-api |
-| Procurement API | http://localhost:3001/procurement-api |
-| Inventory API | http://localhost:3002/inventory-api |
-| Vendor Portal | http://localhost:5173 |
-| RabbitMQ management | http://localhost:15672 (guest / guest) |
+| Service                  | URL                                    |
+| ------------------------ | -------------------------------------- |
+| Vendor API               | http://localhost:3000/vendor-api       |
+| Procurement API          | http://localhost:3001/procurement-api  |
+| Inventory API            | http://localhost:3002/inventory-api    |
+| Vendor Portal            | http://localhost:5173                  |
+| Procurement Dashboard    | http://localhost:5174                  |
+| Inventory Control Center | http://localhost:5175                  |
+| RabbitMQ management      | http://localhost:15672 (guest / guest) |
 
 First time in each service directory: `cp .env.example .env`, then `npm install` and
 `npm run db:migrate`.
@@ -86,11 +89,13 @@ Other tasks: `task infra:down`, `task infra:logs`, `task --list`.
 Modules are built in phases, and an unfinished one must not show up in a running system.
 Each service reads its own flag; the frontends read theirs at build time.
 
-| Flag | Where | Effect when off |
-| --- | --- | --- |
-| `FEATURE_PROCUREMENT` | `service-procurement/.env` | Routes are not mounted and events are not consumed; health still answers |
-| `FEATURE_INVENTORY` | `service-inventory/.env` | The same, for inventory |
-| `VITE_FEATURE_VENDOR_MANAGEMENT` | `vendor-portal/.env` | The portal shows "Coming soon" and hides its menu |
+| Flag                             | Where                           | Effect when off                                                          |
+| -------------------------------- | ------------------------------- | ------------------------------------------------------------------------ |
+| `FEATURE_PROCUREMENT`            | `service-procurement/.env`      | Routes are not mounted and events are not consumed; health still answers |
+| `FEATURE_INVENTORY`              | `service-inventory/.env`        | The same, for inventory                                                  |
+| `VITE_FEATURE_VENDOR_MANAGEMENT` | `vendor-portal/.env`            | The portal shows "Coming soon" and hides its menu                        |
+| `VITE_FEATURE_PROCUREMENT`       | `procurement-dashboard/.env`    | The same, for the buyer dashboard                                        |
+| `VITE_FEATURE_INVENTORY`         | `inventory-control-center/.env` | The same, for the control center                                         |
 
 Set a flag to `false` to hide a module without removing it.
 
