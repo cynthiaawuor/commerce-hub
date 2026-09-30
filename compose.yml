@@ -63,6 +63,19 @@ services:
     networks:
       - warehouse_network
 
+  # Sales Audit's private database, on its own network like the others
+  sales-audit-db:
+    image: postgres:18
+    container_name: sales_audit_postgres
+    environment:
+      POSTGRES_DB: service-sales-audit
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5440:5432'
+    networks:
+      - sales_audit_network
+
   # Event bus. Every service publishes domain events here; subscribers read at their own
   # pace, and a durable queue holds messages while a subscriber is down.
   rabbitmq:
@@ -88,6 +101,7 @@ networks:
   vendor_network: {}
   procurement_network: {}
   warehouse_network: {}
+  sales_audit_network: {}
   events_network: {}
   inventory_network: {}
   receiving_network: {}

@@ -1,0 +1,418 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.outboxEvent",
+    "label": "Create table \"outboxEvent\"",
+    "summary": "Creates table \"outboxEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "outboxEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"outboxEvent\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"outboxEvent\"",
+        "sql": "CREATE TABLE \"public\".\"outboxEvent\" (\n  \"aggregateId\" text NOT NULL,\n  \"attempts\" int4 DEFAULT 0 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deadAt\" timestamptz,\n  \"eventType\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"lastError\" text,\n  \"nextAttemptAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"payload\" text NOT NULL,\n  \"publishedAt\" timestamptz,\n  \"status\" text DEFAULT 'PENDING' NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"outboxEvent_status_check_3f162824\" CHECK (\"status\" IN ('PENDING', 'PUBLISHED', 'DEAD'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"outboxEvent\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.processedEvent",
+    "label": "Create table \"processedEvent\"",
+    "summary": "Creates table \"processedEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "processedEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"processedEvent\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"processedEvent\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"processedEvent\"",
+        "sql": "CREATE TABLE \"public\".\"processedEvent\" (\n  \"eventType\" text NOT NULL,\n  \"handledAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"processedEvent\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"processedEvent\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.recordedSale",
+    "label": "Create table \"recordedSale\"",
+    "summary": "Creates table \"recordedSale\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "recordedSale"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"recordedSale\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"recordedSale\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"recordedSale\"",
+        "sql": "CREATE TABLE \"public\".\"recordedSale\" (\n  \"cardCents\" int4 NOT NULL,\n  \"cashCents\" int4 NOT NULL,\n  \"cashierId\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"registerDayId\" text NOT NULL,\n  \"saleNumber\" text NOT NULL,\n  \"soldAt\" timestamptz NOT NULL,\n  \"totalCents\" int4 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"recordedSale\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"recordedSale\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.registerDay",
+    "label": "Create table \"registerDay\"",
+    "summary": "Creates table \"registerDay\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "registerDay"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"registerDay\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"registerDay\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"registerDay\"",
+        "sql": "CREATE TABLE \"public\".\"registerDay\" (\n  \"businessDate\" text NOT NULL,\n  \"cardDifferenceCents\" int4,\n  \"cashDifferenceCents\" int4,\n  \"checkedWithPos\" bool,\n  \"closedAt\" timestamptz,\n  \"closedBy\" text,\n  \"countedCardCents\" int4,\n  \"countedCashCents\" int4,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"expectedCardCents\" int4 DEFAULT 0 NOT NULL,\n  \"expectedCashCents\" int4 DEFAULT 0 NOT NULL,\n  \"explanation\" text,\n  \"id\" text NOT NULL,\n  \"registerCode\" text NOT NULL,\n  \"salesAfterClose\" int4 DEFAULT 0 NOT NULL,\n  \"salesCount\" int4 DEFAULT 0 NOT NULL,\n  \"status\" text DEFAULT 'OPEN' NOT NULL,\n  \"storeCode\" text NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"registerDay_status_check_32214e16\" CHECK (\"status\" IN ('OPEN', 'CLOSED'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"registerDay\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"registerDay\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.recordedSale.recordedSale_saleNumber_key",
+    "label": "Add unique constraint on \"recordedSale\" (saleNumber)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "recordedSale_saleNumber_key",
+        "table": "recordedSale"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"recordedSale_saleNumber_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "recordedSale_saleNumber_key",
+          "public",
+          "\"public\".\"recordedSale\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"recordedSale_saleNumber_key\"",
+        "sql": "ALTER TABLE \"public\".\"recordedSale\" ADD CONSTRAINT \"recordedSale_saleNumber_key\" UNIQUE (\"saleNumber\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"recordedSale_saleNumber_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "recordedSale_saleNumber_key",
+          "public",
+          "\"public\".\"recordedSale\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.registerDay.registerDay_registerCode_businessDate_key",
+    "label": "Add unique constraint on \"registerDay\" (registerCode, businessDate)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "registerDay_registerCode_businessDate_key",
+        "table": "registerDay"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"registerDay_registerCode_businessDate_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "registerDay_registerCode_businessDate_key",
+          "public",
+          "\"public\".\"registerDay\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"registerDay_registerCode_businessDate_key\"",
+        "sql": "ALTER TABLE \"public\".\"registerDay\" ADD CONSTRAINT \"registerDay_registerCode_businessDate_key\" UNIQUE (\"registerCode\", \"businessDate\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"registerDay_registerCode_businessDate_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "registerDay_registerCode_businessDate_key",
+          "public",
+          "\"public\".\"registerDay\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.outboxEvent.outboxEvent_status_nextAttemptAt_idx_8ba20615",
+    "label": "Create index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" on \"outboxEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "outboxEvent_status_nextAttemptAt_idx_8ba20615",
+        "table": "outboxEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent_status_nextAttemptAt_idx_8ba20615\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\"",
+        "sql": "CREATE INDEX \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" ON \"public\".\"outboxEvent\" (\"status\", \"nextAttemptAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent_status_nextAttemptAt_idx_8ba20615\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.recordedSale.recordedSale_registerDayId_idx_6aab2438",
+    "label": "Create index \"recordedSale_registerDayId_idx_6aab2438\" on \"recordedSale\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "recordedSale_registerDayId_idx_6aab2438",
+        "table": "recordedSale"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"recordedSale_registerDayId_idx_6aab2438\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"recordedSale_registerDayId_idx_6aab2438\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"recordedSale_registerDayId_idx_6aab2438\"",
+        "sql": "CREATE INDEX \"recordedSale_registerDayId_idx_6aab2438\" ON \"public\".\"recordedSale\" (\"registerDayId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"recordedSale_registerDayId_idx_6aab2438\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"recordedSale_registerDayId_idx_6aab2438\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.registerDay.registerDay_status_idx_e98638ab",
+    "label": "Create index \"registerDay_status_idx_e98638ab\" on \"registerDay\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "registerDay_status_idx_e98638ab",
+        "table": "registerDay"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"registerDay_status_idx_e98638ab\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"registerDay_status_idx_e98638ab\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"registerDay_status_idx_e98638ab\"",
+        "sql": "CREATE INDEX \"registerDay_status_idx_e98638ab\" ON \"public\".\"registerDay\" (\"status\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"registerDay_status_idx_e98638ab\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"registerDay_status_idx_e98638ab\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.recordedSale.recordedSale_registerDayId_fkey",
+    "label": "Add foreign key \"recordedSale_registerDayId_fkey\" on \"recordedSale\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "recordedSale_registerDayId_fkey",
+        "table": "recordedSale"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"recordedSale_registerDayId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "recordedSale_registerDayId_fkey",
+          "public",
+          "\"public\".\"recordedSale\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"recordedSale_registerDayId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"recordedSale\"\nADD CONSTRAINT \"recordedSale_registerDayId_fkey\"\nFOREIGN KEY (\"registerDayId\")\nREFERENCES \"public\".\"registerDay\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"recordedSale_registerDayId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "recordedSale_registerDayId_fkey",
+          "public",
+          "\"public\".\"recordedSale\""
+        ]
+      }
+    ]
+  }
+]
