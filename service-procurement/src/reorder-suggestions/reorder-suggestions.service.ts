@@ -85,7 +85,7 @@ const convertSuggestion = async (id: string, user: CurrentUser) => {
 
   if (!offer) {
     throw new ConflictError(
-      `No active supplier is approved to provide ${suggestion.productId}`,
+      `No active supplier is approved to provide ${suggestion.productName}`,
     );
   }
 

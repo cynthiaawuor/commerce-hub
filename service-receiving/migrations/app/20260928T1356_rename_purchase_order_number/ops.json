@@ -1,0 +1,88 @@
+[
+  {
+    "id": "column.expectedDelivery.poNumber.rename",
+    "label": "Rename \"expectedDelivery\".\"poNumber\" to \"purchaseOrderNumber\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "purchaseOrderNumber",
+        "table": "expectedDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "column \"poNumber\" exists on \"expectedDelivery\"",
+        "sql": "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3) AS \"result\"",
+        "params": [
+          "public",
+          "expectedDelivery",
+          "poNumber"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "rename \"expectedDelivery\".\"poNumber\"",
+        "sql": "ALTER TABLE \"public\".\"expectedDelivery\" RENAME COLUMN \"poNumber\" TO \"purchaseOrderNumber\"",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "column \"purchaseOrderNumber\" exists on \"expectedDelivery\"",
+        "sql": "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3) AS \"result\"",
+        "params": [
+          "public",
+          "expectedDelivery",
+          "purchaseOrderNumber"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.goodsReceivedNote.poNumber.rename",
+    "label": "Rename \"goodsReceivedNote\".\"poNumber\" to \"purchaseOrderNumber\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "purchaseOrderNumber",
+        "table": "goodsReceivedNote"
+      }
+    },
+    "precheck": [
+      {
+        "description": "column \"poNumber\" exists on \"goodsReceivedNote\"",
+        "sql": "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3) AS \"result\"",
+        "params": [
+          "public",
+          "goodsReceivedNote",
+          "poNumber"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "rename \"goodsReceivedNote\".\"poNumber\"",
+        "sql": "ALTER TABLE \"public\".\"goodsReceivedNote\" RENAME COLUMN \"poNumber\" TO \"purchaseOrderNumber\"",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "column \"purchaseOrderNumber\" exists on \"goodsReceivedNote\"",
+        "sql": "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3) AS \"result\"",
+        "params": [
+          "public",
+          "goodsReceivedNote",
+          "purchaseOrderNumber"
+        ]
+      }
+    ]
+  }
+]

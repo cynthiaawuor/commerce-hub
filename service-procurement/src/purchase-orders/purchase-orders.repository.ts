@@ -1,3 +1,4 @@
+import { claimEvent } from "../events/processed-events.repository";
 import { db } from "../prisma/db";
 import type { PurchaseOrderStatus } from "./purchase-order-status";
 
@@ -176,12 +177,21 @@ type ReceivedQuantity = { lineId: string; quantityReceived: number };
 
 // Received quantities and any resulting status change are written together, so the
 // order's status always matches its lines.
+// When the receipt comes from an event, the event is claimed in the same transaction,
+// so a redelivery cannot count the same goods twice.
+type EventClaim = { eventId: string; eventType: string };
+
 const recordReceipt = async (
   id: string,
   received: ReceivedQuantity[],
   statusChange: StatusChange | null,
+  claim?: EventClaim | undefined,
 ) =>
   db.transaction(async (tx) => {
+    if (claim && !(await claimEvent(tx, claim.eventId, claim.eventType))) {
+      return null;
+    }
+
     for (const line of received) {
       await tx.orm.public.PurchaseOrderLine.where({
         id: line.lineId,

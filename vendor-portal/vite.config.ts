@@ -13,6 +13,11 @@ export default defineConfig({
         target: "http://localhost:3000",
         changeOrigin: true,
       },
+      // The catalog form looks products up in Inventory, which owns the product master
+      "/inventory-api": {
+        target: "http://localhost:3002",
+        changeOrigin: true,
+      },
     },
   },
   test: {
