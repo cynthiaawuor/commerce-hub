@@ -42,6 +42,7 @@ tasks:
         dev:receiving-app,
         dev:warehouse-app,
         dev:sales-audit-app,
+        dev:financials-app,
       ]
 
   dev:vendor:
@@ -144,6 +145,14 @@ tasks:
     desc: Run sales-audit-app in watch mode (http://localhost:5179)
     dir: sales-audit-app
     prefix: sales-audit-app
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:financials-app:
+    desc: Run financials-app in watch mode (http://localhost:5180)
+    dir: financials-app
+    prefix: financials-app
     interactive: true
     cmds:
       - npm run dev
