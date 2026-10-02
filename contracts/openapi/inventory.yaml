@@ -61,12 +61,12 @@ components:
         id: { type: string, format: uuid }
         sku: { type: string, example: MAIZE-2KG }
         name: { type: string }
-        description: { type: string, nullable: true }
+        description: { type: [string, 'null'] }
         unitOfMeasure: { type: string, default: each }
-        widthMm: { type: integer, nullable: true }
-        heightMm: { type: integer, nullable: true }
-        depthMm: { type: integer, nullable: true }
-        weightG: { type: integer, nullable: true }
+        widthMm: { type: [integer, 'null'] }
+        heightMm: { type: [integer, 'null'] }
+        depthMm: { type: [integer, 'null'] }
+        weightG: { type: [integer, 'null'] }
         reorderPoint:
           type: integer
           description: Crossing this publishes StockLow. Zero means do not watch this product.
@@ -104,8 +104,8 @@ components:
           type: integer
           description: Positive adds stock, negative removes it
         onHandAfter: { type: integer }
-        reason: { type: string, nullable: true }
-        reference: { type: string, nullable: true }
+        reason: { type: [string, 'null'] }
+        reference: { type: [string, 'null'] }
         recordedBy: { type: string }
         createdAt: { type: string }
     Reservation:
@@ -116,10 +116,10 @@ components:
         locationId: { type: string, format: uuid }
         quantity: { type: integer }
         status: { type: string, enum: [ACTIVE, COMMITTED, RELEASED, EXPIRED] }
-        reference: { type: string, nullable: true }
+        reference: { type: [string, 'null'] }
         reservedBy: { type: string }
         expiresAt: { type: string }
-        resolvedAt: { type: string, nullable: true }
+        resolvedAt: { type: [string, 'null'] }
 
   responses:
     BadRequest:
