@@ -76,6 +76,19 @@ services:
     networks:
       - sales_audit_network
 
+  # Financials' private database, on its own network like the others
+  financials-db:
+    image: postgres:18
+    container_name: financials_postgres
+    environment:
+      POSTGRES_DB: service-financials
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5441:5432'
+    networks:
+      - financials_network
+
   # Event bus. Every service publishes domain events here; subscribers read at their own
   # pace, and a durable queue holds messages while a subscriber is down.
   rabbitmq:
@@ -102,6 +115,7 @@ networks:
   procurement_network: {}
   warehouse_network: {}
   sales_audit_network: {}
+  financials_network: {}
   events_network: {}
   inventory_network: {}
   receiving_network: {}
