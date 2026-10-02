@@ -8,7 +8,7 @@ output: prefixed
 
 vars:
   # Each service owns a private database, so there is one container per service
-  POSTGRES_CONTAINERS: commerce_postgres procurement_postgres inventory_postgres receiving_postgres warehouse_postgres sales_audit_postgres financials_postgres
+  POSTGRES_CONTAINERS: commerce_postgres procurement_postgres inventory_postgres receiving_postgres warehouse_postgres pos_postgres sales_audit_postgres financials_postgres
   RABBITMQ_CONTAINER: commerce_rabbitmq
 
 tasks:
@@ -34,6 +34,7 @@ tasks:
         dev:inventory,
         dev:receiving,
         dev:warehouse,
+        dev:pos,
         dev:sales-audit,
         dev:financials,
         dev:portal,
@@ -41,6 +42,7 @@ tasks:
         dev:control-center,
         dev:receiving-app,
         dev:warehouse-app,
+        dev:pos-app,
         dev:sales-audit-app,
       ]
 
@@ -92,6 +94,14 @@ tasks:
     cmds:
       - npm run dev
 
+  dev:pos:
+    desc: Run service-pos in watch mode (http://localhost:3005)
+    dir: service-pos
+    prefix: pos
+    interactive: true
+    cmds:
+      - npm run dev
+
   dev:sales-audit:
     desc: Run service-sales-audit in watch mode (http://localhost:3006)
     dir: service-sales-audit
@@ -136,6 +146,14 @@ tasks:
     desc: Run warehouse-floor-app in watch mode (http://localhost:5177)
     dir: warehouse-floor-app
     prefix: warehouse-app
+    interactive: true
+    cmds:
+      - npm run dev
+
+  dev:pos-app:
+    desc: Run pos-till-app in watch mode (http://localhost:5178)
+    dir: pos-till-app
+    prefix: pos-app
     interactive: true
     cmds:
       - npm run dev

@@ -1,0 +1,580 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.outboxEvent",
+    "label": "Create table \"outboxEvent\"",
+    "summary": "Creates table \"outboxEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "outboxEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"outboxEvent\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"outboxEvent\"",
+        "sql": "CREATE TABLE \"public\".\"outboxEvent\" (\n  \"aggregateId\" text NOT NULL,\n  \"attempts\" int4 DEFAULT 0 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deadAt\" timestamptz,\n  \"eventType\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"lastError\" text,\n  \"nextAttemptAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"payload\" text NOT NULL,\n  \"publishedAt\" timestamptz,\n  \"status\" text DEFAULT 'PENDING' NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"outboxEvent_status_check_3f162824\" CHECK (\"status\" IN ('PENDING', 'PUBLISHED', 'DEAD'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"outboxEvent\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.payment",
+    "label": "Create table \"payment\"",
+    "summary": "Creates table \"payment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "payment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"payment\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"payment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"payment\"",
+        "sql": "CREATE TABLE \"public\".\"payment\" (\n  \"amountCents\" int4 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"method\" text NOT NULL,\n  \"saleId\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"payment_method_check_1239a7a7\" CHECK (\"method\" IN ('CASH', 'CARD'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"payment\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"payment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.productPrice",
+    "label": "Create table \"productPrice\"",
+    "summary": "Creates table \"productPrice\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "productPrice"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"productPrice\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"productPrice\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"productPrice\"",
+        "sql": "CREATE TABLE \"public\".\"productPrice\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"priceCents\" int4 NOT NULL,\n  \"productId\" text NOT NULL,\n  \"productName\" text NOT NULL,\n  \"sku\" text NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"updatedBy\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"product_price_positive_89df90a0\" CHECK (\"priceCents\" > 0)\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"productPrice\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"productPrice\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.sale",
+    "label": "Create table \"sale\"",
+    "summary": "Creates table \"sale\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "sale"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"sale\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"sale\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"sale\"",
+        "sql": "CREATE TABLE \"public\".\"sale\" (\n  \"cashierId\" text NOT NULL,\n  \"changeCents\" int4 DEFAULT 0 NOT NULL,\n  \"completedAt\" timestamptz,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"paidCents\" int4 DEFAULT 0 NOT NULL,\n  \"registerCode\" text NOT NULL,\n  \"saleNumber\" text NOT NULL,\n  \"status\" text DEFAULT 'OPEN' NOT NULL,\n  \"storeCode\" text NOT NULL,\n  \"taxCents\" int4 DEFAULT 0 NOT NULL,\n  \"totalCents\" int4 DEFAULT 0 NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"sale_status_check_335e9174\" CHECK (\"status\" IN ('OPEN', 'COMPLETED', 'CANCELLED'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"sale\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"sale\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.saleProduct",
+    "label": "Create table \"saleProduct\"",
+    "summary": "Creates table \"saleProduct\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "saleProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"saleProduct\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"saleProduct\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"saleProduct\"",
+        "sql": "CREATE TABLE \"public\".\"saleProduct\" (\n  \"committedAt\" timestamptz,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"productId\" text NOT NULL,\n  \"productName\" text NOT NULL,\n  \"quantity\" int4 NOT NULL,\n  \"reservationId\" text NOT NULL,\n  \"saleId\" text NOT NULL,\n  \"sku\" text NOT NULL,\n  \"totalCents\" int4 NOT NULL,\n  \"unitPriceCents\" int4 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"saleProduct\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"saleProduct\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.productPrice.productPrice_productId_key",
+    "label": "Add unique constraint on \"productPrice\" (productId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "productPrice_productId_key",
+        "table": "productPrice"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"productPrice_productId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "productPrice_productId_key",
+          "public",
+          "\"public\".\"productPrice\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"productPrice_productId_key\"",
+        "sql": "ALTER TABLE \"public\".\"productPrice\" ADD CONSTRAINT \"productPrice_productId_key\" UNIQUE (\"productId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"productPrice_productId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "productPrice_productId_key",
+          "public",
+          "\"public\".\"productPrice\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.productPrice.productPrice_sku_key",
+    "label": "Add unique constraint on \"productPrice\" (sku)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "productPrice_sku_key",
+        "table": "productPrice"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"productPrice_sku_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "productPrice_sku_key",
+          "public",
+          "\"public\".\"productPrice\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"productPrice_sku_key\"",
+        "sql": "ALTER TABLE \"public\".\"productPrice\" ADD CONSTRAINT \"productPrice_sku_key\" UNIQUE (\"sku\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"productPrice_sku_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "productPrice_sku_key",
+          "public",
+          "\"public\".\"productPrice\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.sale.sale_saleNumber_key",
+    "label": "Add unique constraint on \"sale\" (saleNumber)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "sale_saleNumber_key",
+        "table": "sale"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"sale_saleNumber_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "sale_saleNumber_key",
+          "public",
+          "\"public\".\"sale\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"sale_saleNumber_key\"",
+        "sql": "ALTER TABLE \"public\".\"sale\" ADD CONSTRAINT \"sale_saleNumber_key\" UNIQUE (\"saleNumber\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"sale_saleNumber_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "sale_saleNumber_key",
+          "public",
+          "\"public\".\"sale\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.outboxEvent.outboxEvent_status_nextAttemptAt_idx_8ba20615",
+    "label": "Create index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" on \"outboxEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "outboxEvent_status_nextAttemptAt_idx_8ba20615",
+        "table": "outboxEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent_status_nextAttemptAt_idx_8ba20615\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\"",
+        "sql": "CREATE INDEX \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" ON \"public\".\"outboxEvent\" (\"status\", \"nextAttemptAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent_status_nextAttemptAt_idx_8ba20615\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.payment.payment_saleId_idx_b4c0fb73",
+    "label": "Create index \"payment_saleId_idx_b4c0fb73\" on \"payment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "payment_saleId_idx_b4c0fb73",
+        "table": "payment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"payment_saleId_idx_b4c0fb73\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"payment_saleId_idx_b4c0fb73\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"payment_saleId_idx_b4c0fb73\"",
+        "sql": "CREATE INDEX \"payment_saleId_idx_b4c0fb73\" ON \"public\".\"payment\" (\"saleId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"payment_saleId_idx_b4c0fb73\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"payment_saleId_idx_b4c0fb73\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.sale.sale_registerCode_status_idx_eec3ba0a",
+    "label": "Create index \"sale_registerCode_status_idx_eec3ba0a\" on \"sale\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "sale_registerCode_status_idx_eec3ba0a",
+        "table": "sale"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"sale_registerCode_status_idx_eec3ba0a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"sale_registerCode_status_idx_eec3ba0a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"sale_registerCode_status_idx_eec3ba0a\"",
+        "sql": "CREATE INDEX \"sale_registerCode_status_idx_eec3ba0a\" ON \"public\".\"sale\" (\"registerCode\", \"status\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"sale_registerCode_status_idx_eec3ba0a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"sale_registerCode_status_idx_eec3ba0a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.saleProduct.saleProduct_saleId_idx_b4c0fb73",
+    "label": "Create index \"saleProduct_saleId_idx_b4c0fb73\" on \"saleProduct\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "saleProduct_saleId_idx_b4c0fb73",
+        "table": "saleProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"saleProduct_saleId_idx_b4c0fb73\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"saleProduct_saleId_idx_b4c0fb73\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"saleProduct_saleId_idx_b4c0fb73\"",
+        "sql": "CREATE INDEX \"saleProduct_saleId_idx_b4c0fb73\" ON \"public\".\"saleProduct\" (\"saleId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"saleProduct_saleId_idx_b4c0fb73\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"saleProduct_saleId_idx_b4c0fb73\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.payment.payment_saleId_fkey",
+    "label": "Add foreign key \"payment_saleId_fkey\" on \"payment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "payment_saleId_fkey",
+        "table": "payment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"payment_saleId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "payment_saleId_fkey",
+          "public",
+          "\"public\".\"payment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"payment_saleId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"payment\"\nADD CONSTRAINT \"payment_saleId_fkey\"\nFOREIGN KEY (\"saleId\")\nREFERENCES \"public\".\"sale\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"payment_saleId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "payment_saleId_fkey",
+          "public",
+          "\"public\".\"payment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.saleProduct.saleProduct_saleId_fkey",
+    "label": "Add foreign key \"saleProduct_saleId_fkey\" on \"saleProduct\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "saleProduct_saleId_fkey",
+        "table": "saleProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"saleProduct_saleId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "saleProduct_saleId_fkey",
+          "public",
+          "\"public\".\"saleProduct\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"saleProduct_saleId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"saleProduct\"\nADD CONSTRAINT \"saleProduct_saleId_fkey\"\nFOREIGN KEY (\"saleId\")\nREFERENCES \"public\".\"sale\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"saleProduct_saleId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "saleProduct_saleId_fkey",
+          "public",
+          "\"public\".\"saleProduct\""
+        ]
+      }
+    ]
+  }
+]
