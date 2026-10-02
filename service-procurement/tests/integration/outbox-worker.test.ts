@@ -39,7 +39,7 @@ describe("outbox worker", () => {
   it("dead-letters a malformed event without blocking the ones behind it", async () => {
     const broken = await insertEvent("{not json");
     const healthy = await insertEvent(
-      JSON.stringify({ poNumber: "PO-000001" }),
+      JSON.stringify({ purchaseOrderNumber: "PO-000001" }),
     );
 
     await publishPendingEvents();

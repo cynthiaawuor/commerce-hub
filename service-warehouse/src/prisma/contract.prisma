@@ -1,0 +1,88 @@
+// ------------------------------------------------------
+// Warehouse Operations decides where goods physically go and remembers where they are.
+// It never counts the business's total stock (Inventory does) and never orders stock.
+// productId and goodsReceivedNoteNumber are soft references to other services.
+// ------------------------------------------------------
+
+// One numbered storage spot, usually a shelf position on a rack, e.g. "A-01"
+model ShelfLocation {
+    id   String @id @default(uuid())
+    code String @unique
+
+    // The area of the warehouse, e.g. "A" for the racks by the dock
+    zone String
+
+    // Metres a worker walks from the dock; nearer shelves are suggested first
+    distanceFromDock Int
+
+    // Measured in units for the MVP, not volume or weight
+    capacityUnits Int
+    occupiedUnits Int @default(0)
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    products ShelfProduct[]
+
+    // The database refuses to overfill a shelf, even if two workers confirm at once
+    @@check(expression: "\"occupiedUnits\" >= 0 AND \"occupiedUnits\" <= \"capacityUnits\"", name: "shelf_location_within_capacity")
+}
+
+// What is on each shelf, so a product can be found again
+model ShelfProduct {
+    id              String @id @default(uuid())
+    shelfLocationId String
+
+    productId   String
+    productName String
+    quantity    Int
+
+    shelfLocation ShelfLocation @relation(fields: [shelfLocationId], references: [id], onDelete: Cascade)
+
+    @@unique([shelfLocationId, productId])
+}
+
+// PENDING: goods are waiting at the dock. COMPLETED: a worker has shelved them.
+enum PutawayTaskStatus {
+    PENDING   = "PENDING"
+    COMPLETED = "COMPLETED"
+
+    @@type("pg/text@1")
+}
+
+// "Take these goods from the dock and put them on a shelf." One per product on a
+// goods received note, created from Receiving's GoodsReceived event.
+model PutawayTask {
+    id String @id @default(uuid())
+
+    goodsReceivedNoteNumber String
+    purchaseOrderNumber     String
+    productId               String
+    productName             String
+    quantity                Int
+
+    status PutawayTaskStatus @default(PENDING)
+
+    // Shelf codes rather than ids: stable, and what the worker reads off the rack.
+    // suggestedShelfCode is null when no shelf had room when the task was created.
+    suggestedShelfCode String?
+    shelfCode          String?
+
+    completedBy String?
+    completedAt TimestamptzString?
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    @@unique([goodsReceivedNoteNumber, productId])
+    @@index([status])
+}
+
+// Events already handled, so a redelivered GoodsReceived is ignored
+model ProcessedEvent {
+    // The eventId from the envelope
+    id        String @id
+    eventType String
+
+    handledAt TimestamptzString @default(now())
+}

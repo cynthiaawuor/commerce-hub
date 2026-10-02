@@ -3,6 +3,7 @@ import { createApp } from "./app";
 import { config } from "./core/config";
 import { closeConsumers } from "./events/event-consumer";
 import { startOutboxWorker, stopOutboxWorker } from "./events/outbox-worker";
+import { startGoodsReceivedConsumer } from "./events/goods-received.consumer";
 import { startStockLowConsumer } from "./events/stock-low.consumer";
 
 const PORT = process.env["PORT"] || 3001;
@@ -21,6 +22,9 @@ const server = createApp().listen(PORT, () => {
   // HTTP, and events queue in RabbitMQ until it is restarted.
   startStockLowConsumer().catch((err) =>
     console.error("Could not subscribe to StockLow events:", err),
+  );
+  startGoodsReceivedConsumer().catch((err) =>
+    console.error("Could not subscribe to GoodsReceived events:", err),
   );
 });
 

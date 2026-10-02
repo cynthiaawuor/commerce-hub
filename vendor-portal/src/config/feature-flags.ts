@@ -16,6 +16,8 @@ export function loadFeatureFlags(
 export const featureFlags = loadFeatureFlags();
 export const moduleUrls = {
   vendor: env.vendorApiUrl,
+  // Inventory owns the product master, so the catalog form searches it for products
+  inventory: env.inventoryApiUrl,
 } as const;
 
 export type Module = keyof typeof moduleUrls;

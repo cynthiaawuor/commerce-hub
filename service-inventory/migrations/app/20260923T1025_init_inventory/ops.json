@@ -1,0 +1,1021 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.location",
+    "label": "Create table \"location\"",
+    "summary": "Creates table \"location\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "location"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"location\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"location\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"location\"",
+        "sql": "CREATE TABLE \"public\".\"location\" (\n  \"code\" text NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"isActive\" bool DEFAULT true NOT NULL,\n  \"name\" text NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"location\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"location\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.outboxEvent",
+    "label": "Create table \"outboxEvent\"",
+    "summary": "Creates table \"outboxEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "outboxEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"outboxEvent\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"outboxEvent\"",
+        "sql": "CREATE TABLE \"public\".\"outboxEvent\" (\n  \"aggregateId\" text NOT NULL,\n  \"attempts\" int4 DEFAULT 0 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deadAt\" timestamptz,\n  \"eventType\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"lastError\" text,\n  \"nextAttemptAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"payload\" text NOT NULL,\n  \"publishedAt\" timestamptz,\n  \"status\" text DEFAULT 'PENDING' NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"outboxEvent_status_check_3f162824\" CHECK (\"status\" IN ('PENDING', 'PUBLISHED', 'DEAD'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"outboxEvent\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.processedEvent",
+    "label": "Create table \"processedEvent\"",
+    "summary": "Creates table \"processedEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "processedEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"processedEvent\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"processedEvent\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"processedEvent\"",
+        "sql": "CREATE TABLE \"public\".\"processedEvent\" (\n  \"eventType\" text NOT NULL,\n  \"handledAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"processedEvent\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"processedEvent\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.product",
+    "label": "Create table \"product\"",
+    "summary": "Creates table \"product\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "product"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"product\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"product\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"product\"",
+        "sql": "CREATE TABLE \"public\".\"product\" (\n  \"averageCostCents\" int4 DEFAULT 0 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"depthMm\" int4,\n  \"description\" text,\n  \"heightMm\" int4,\n  \"id\" text NOT NULL,\n  \"isActive\" bool DEFAULT true NOT NULL,\n  \"name\" text NOT NULL,\n  \"reorderPoint\" int4 DEFAULT 0 NOT NULL,\n  \"reorderQuantity\" int4 DEFAULT 0 NOT NULL,\n  \"sku\" text NOT NULL,\n  \"unitOfMeasure\" text DEFAULT 'each' NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"weightG\" int4,\n  \"widthMm\" int4,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"product\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"product\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.reservation",
+    "label": "Create table \"reservation\"",
+    "summary": "Creates table \"reservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "reservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"reservation\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"reservation\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"reservation\"",
+        "sql": "CREATE TABLE \"public\".\"reservation\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"expiresAt\" timestamptz NOT NULL,\n  \"id\" text NOT NULL,\n  \"locationId\" text NOT NULL,\n  \"productId\" text NOT NULL,\n  \"quantity\" int4 NOT NULL,\n  \"reference\" text,\n  \"reservedBy\" text NOT NULL,\n  \"resolvedAt\" timestamptz,\n  \"status\" text DEFAULT 'ACTIVE' NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"reservation_status_check_f2701be1\" CHECK (\"status\" IN ('ACTIVE', 'COMMITTED', 'RELEASED', 'EXPIRED'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"reservation\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"reservation\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.stockLevel",
+    "label": "Create table \"stockLevel\"",
+    "summary": "Creates table \"stockLevel\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "stockLevel"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"stockLevel\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockLevel\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"stockLevel\"",
+        "sql": "CREATE TABLE \"public\".\"stockLevel\" (\n  \"allocated\" int4 DEFAULT 0 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"locationId\" text NOT NULL,\n  \"onHand\" int4 DEFAULT 0 NOT NULL,\n  \"onOrder\" int4 DEFAULT 0 NOT NULL,\n  \"productId\" text NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"stockLevel\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockLevel\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.stockMovement",
+    "label": "Create table \"stockMovement\"",
+    "summary": "Creates table \"stockMovement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "stockMovement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"stockMovement\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockMovement\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"stockMovement\"",
+        "sql": "CREATE TABLE \"public\".\"stockMovement\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"locationId\" text NOT NULL,\n  \"onHandAfter\" int4 NOT NULL,\n  \"productId\" text NOT NULL,\n  \"quantity\" int4 NOT NULL,\n  \"reason\" text,\n  \"recordedBy\" text NOT NULL,\n  \"reference\" text,\n  \"type\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"stockMovement_type_check_ad7a60c5\" CHECK (\"type\" IN ('RECEIPT', 'SALE', 'RETURN', 'ADJUSTMENT', 'TRANSFER_IN', 'TRANSFER_OUT'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"stockMovement\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockMovement\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.location.location_code_key",
+    "label": "Add unique constraint on \"location\" (code)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "location_code_key",
+        "table": "location"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"location_code_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "location_code_key",
+          "public",
+          "\"public\".\"location\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"location_code_key\"",
+        "sql": "ALTER TABLE \"public\".\"location\" ADD CONSTRAINT \"location_code_key\" UNIQUE (\"code\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"location_code_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "location_code_key",
+          "public",
+          "\"public\".\"location\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.product.product_sku_key",
+    "label": "Add unique constraint on \"product\" (sku)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "product_sku_key",
+        "table": "product"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"product_sku_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "product_sku_key",
+          "public",
+          "\"public\".\"product\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"product_sku_key\"",
+        "sql": "ALTER TABLE \"public\".\"product\" ADD CONSTRAINT \"product_sku_key\" UNIQUE (\"sku\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"product_sku_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "product_sku_key",
+          "public",
+          "\"public\".\"product\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.stockLevel.stockLevel_productId_locationId_key",
+    "label": "Add unique constraint on \"stockLevel\" (productId, locationId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "stockLevel_productId_locationId_key",
+        "table": "stockLevel"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"stockLevel_productId_locationId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "stockLevel_productId_locationId_key",
+          "public",
+          "\"public\".\"stockLevel\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"stockLevel_productId_locationId_key\"",
+        "sql": "ALTER TABLE \"public\".\"stockLevel\" ADD CONSTRAINT \"stockLevel_productId_locationId_key\" UNIQUE (\"productId\", \"locationId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"stockLevel_productId_locationId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "stockLevel_productId_locationId_key",
+          "public",
+          "\"public\".\"stockLevel\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.outboxEvent.outboxEvent_status_nextAttemptAt_idx_8ba20615",
+    "label": "Create index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" on \"outboxEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "outboxEvent_status_nextAttemptAt_idx_8ba20615",
+        "table": "outboxEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent_status_nextAttemptAt_idx_8ba20615\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\"",
+        "sql": "CREATE INDEX \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" ON \"public\".\"outboxEvent\" (\"status\", \"nextAttemptAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent_status_nextAttemptAt_idx_8ba20615\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.reservation.reservation_locationId_idx_7aae3038",
+    "label": "Create index \"reservation_locationId_idx_7aae3038\" on \"reservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "reservation_locationId_idx_7aae3038",
+        "table": "reservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"reservation_locationId_idx_7aae3038\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"reservation_locationId_idx_7aae3038\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"reservation_locationId_idx_7aae3038\"",
+        "sql": "CREATE INDEX \"reservation_locationId_idx_7aae3038\" ON \"public\".\"reservation\" (\"locationId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"reservation_locationId_idx_7aae3038\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"reservation_locationId_idx_7aae3038\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.reservation.reservation_productId_idx_5858600a",
+    "label": "Create index \"reservation_productId_idx_5858600a\" on \"reservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "reservation_productId_idx_5858600a",
+        "table": "reservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"reservation_productId_idx_5858600a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"reservation_productId_idx_5858600a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"reservation_productId_idx_5858600a\"",
+        "sql": "CREATE INDEX \"reservation_productId_idx_5858600a\" ON \"public\".\"reservation\" (\"productId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"reservation_productId_idx_5858600a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"reservation_productId_idx_5858600a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.reservation.reservation_status_expiresAt_idx_c206f415",
+    "label": "Create index \"reservation_status_expiresAt_idx_c206f415\" on \"reservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "reservation_status_expiresAt_idx_c206f415",
+        "table": "reservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"reservation_status_expiresAt_idx_c206f415\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"reservation_status_expiresAt_idx_c206f415\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"reservation_status_expiresAt_idx_c206f415\"",
+        "sql": "CREATE INDEX \"reservation_status_expiresAt_idx_c206f415\" ON \"public\".\"reservation\" (\"status\", \"expiresAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"reservation_status_expiresAt_idx_c206f415\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"reservation_status_expiresAt_idx_c206f415\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.stockLevel.stockLevel_locationId_idx_7aae3038",
+    "label": "Create index \"stockLevel_locationId_idx_7aae3038\" on \"stockLevel\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "stockLevel_locationId_idx_7aae3038",
+        "table": "stockLevel"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"stockLevel_locationId_idx_7aae3038\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockLevel_locationId_idx_7aae3038\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"stockLevel_locationId_idx_7aae3038\"",
+        "sql": "CREATE INDEX \"stockLevel_locationId_idx_7aae3038\" ON \"public\".\"stockLevel\" (\"locationId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"stockLevel_locationId_idx_7aae3038\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockLevel_locationId_idx_7aae3038\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.stockLevel.stockLevel_productId_idx_5858600a",
+    "label": "Create index \"stockLevel_productId_idx_5858600a\" on \"stockLevel\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "stockLevel_productId_idx_5858600a",
+        "table": "stockLevel"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"stockLevel_productId_idx_5858600a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockLevel_productId_idx_5858600a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"stockLevel_productId_idx_5858600a\"",
+        "sql": "CREATE INDEX \"stockLevel_productId_idx_5858600a\" ON \"public\".\"stockLevel\" (\"productId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"stockLevel_productId_idx_5858600a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockLevel_productId_idx_5858600a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.stockMovement.stockMovement_locationId_idx_7aae3038",
+    "label": "Create index \"stockMovement_locationId_idx_7aae3038\" on \"stockMovement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "stockMovement_locationId_idx_7aae3038",
+        "table": "stockMovement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"stockMovement_locationId_idx_7aae3038\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockMovement_locationId_idx_7aae3038\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"stockMovement_locationId_idx_7aae3038\"",
+        "sql": "CREATE INDEX \"stockMovement_locationId_idx_7aae3038\" ON \"public\".\"stockMovement\" (\"locationId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"stockMovement_locationId_idx_7aae3038\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockMovement_locationId_idx_7aae3038\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.stockMovement.stockMovement_productId_idx_5858600a",
+    "label": "Create index \"stockMovement_productId_idx_5858600a\" on \"stockMovement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "stockMovement_productId_idx_5858600a",
+        "table": "stockMovement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"stockMovement_productId_idx_5858600a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockMovement_productId_idx_5858600a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"stockMovement_productId_idx_5858600a\"",
+        "sql": "CREATE INDEX \"stockMovement_productId_idx_5858600a\" ON \"public\".\"stockMovement\" (\"productId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"stockMovement_productId_idx_5858600a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockMovement_productId_idx_5858600a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.stockMovement.stockMovement_productId_locationId_createdAt_idx_89d8a47a",
+    "label": "Create index \"stockMovement_productId_locationId_createdAt_idx_89d8a47a\" on \"stockMovement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "stockMovement_productId_locationId_createdAt_idx_89d8a47a",
+        "table": "stockMovement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"stockMovement_productId_locationId_createdAt_idx_89d8a47a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockMovement_productId_locationId_createdAt_idx_89d8a47a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"stockMovement_productId_locationId_createdAt_idx_89d8a47a\"",
+        "sql": "CREATE INDEX \"stockMovement_productId_locationId_createdAt_idx_89d8a47a\" ON \"public\".\"stockMovement\" (\"productId\", \"locationId\", \"createdAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"stockMovement_productId_locationId_createdAt_idx_89d8a47a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"stockMovement_productId_locationId_createdAt_idx_89d8a47a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.reservation.reservation_productId_fkey",
+    "label": "Add foreign key \"reservation_productId_fkey\" on \"reservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "reservation_productId_fkey",
+        "table": "reservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"reservation_productId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "reservation_productId_fkey",
+          "public",
+          "\"public\".\"reservation\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"reservation_productId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"reservation\"\nADD CONSTRAINT \"reservation_productId_fkey\"\nFOREIGN KEY (\"productId\")\nREFERENCES \"public\".\"product\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"reservation_productId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "reservation_productId_fkey",
+          "public",
+          "\"public\".\"reservation\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.reservation.reservation_locationId_fkey",
+    "label": "Add foreign key \"reservation_locationId_fkey\" on \"reservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "reservation_locationId_fkey",
+        "table": "reservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"reservation_locationId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "reservation_locationId_fkey",
+          "public",
+          "\"public\".\"reservation\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"reservation_locationId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"reservation\"\nADD CONSTRAINT \"reservation_locationId_fkey\"\nFOREIGN KEY (\"locationId\")\nREFERENCES \"public\".\"location\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"reservation_locationId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "reservation_locationId_fkey",
+          "public",
+          "\"public\".\"reservation\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.stockLevel.stockLevel_productId_fkey",
+    "label": "Add foreign key \"stockLevel_productId_fkey\" on \"stockLevel\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "stockLevel_productId_fkey",
+        "table": "stockLevel"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"stockLevel_productId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "stockLevel_productId_fkey",
+          "public",
+          "\"public\".\"stockLevel\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"stockLevel_productId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"stockLevel\"\nADD CONSTRAINT \"stockLevel_productId_fkey\"\nFOREIGN KEY (\"productId\")\nREFERENCES \"public\".\"product\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"stockLevel_productId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "stockLevel_productId_fkey",
+          "public",
+          "\"public\".\"stockLevel\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.stockLevel.stockLevel_locationId_fkey",
+    "label": "Add foreign key \"stockLevel_locationId_fkey\" on \"stockLevel\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "stockLevel_locationId_fkey",
+        "table": "stockLevel"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"stockLevel_locationId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "stockLevel_locationId_fkey",
+          "public",
+          "\"public\".\"stockLevel\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"stockLevel_locationId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"stockLevel\"\nADD CONSTRAINT \"stockLevel_locationId_fkey\"\nFOREIGN KEY (\"locationId\")\nREFERENCES \"public\".\"location\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"stockLevel_locationId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "stockLevel_locationId_fkey",
+          "public",
+          "\"public\".\"stockLevel\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.stockMovement.stockMovement_productId_fkey",
+    "label": "Add foreign key \"stockMovement_productId_fkey\" on \"stockMovement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "stockMovement_productId_fkey",
+        "table": "stockMovement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"stockMovement_productId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "stockMovement_productId_fkey",
+          "public",
+          "\"public\".\"stockMovement\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"stockMovement_productId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"stockMovement\"\nADD CONSTRAINT \"stockMovement_productId_fkey\"\nFOREIGN KEY (\"productId\")\nREFERENCES \"public\".\"product\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"stockMovement_productId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "stockMovement_productId_fkey",
+          "public",
+          "\"public\".\"stockMovement\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.stockMovement.stockMovement_locationId_fkey",
+    "label": "Add foreign key \"stockMovement_locationId_fkey\" on \"stockMovement\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "stockMovement_locationId_fkey",
+        "table": "stockMovement"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"stockMovement_locationId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "stockMovement_locationId_fkey",
+          "public",
+          "\"public\".\"stockMovement\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"stockMovement_locationId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"stockMovement\"\nADD CONSTRAINT \"stockMovement_locationId_fkey\"\nFOREIGN KEY (\"locationId\")\nREFERENCES \"public\".\"location\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"stockMovement_locationId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "stockMovement_locationId_fkey",
+          "public",
+          "\"public\".\"stockMovement\""
+        ]
+      }
+    ]
+  }
+]

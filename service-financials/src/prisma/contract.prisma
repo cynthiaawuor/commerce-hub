@@ -1,0 +1,198 @@
+// ------------------------------------------------------
+// Financials turns what other services announce into a double-entry ledger, and
+// answers "what do we own, what do we owe, and are we making money?".
+// It never counts stock, sells, or decides what to order.
+// purchaseOrderId, supplierId, saleNumber and sku are soft references to other services.
+// Money is integer cents.
+// ------------------------------------------------------
+
+// What caused a journal entry, so every figure can be traced back to its event
+enum JournalSource {
+    GOODS_RECEIVED   = "GOODS_RECEIVED"
+    SALE             = "SALE"
+    SALE_COST        = "SALE_COST"
+    DAY_CLOSED       = "DAY_CLOSED"
+    SUPPLIER_PAYMENT = "SUPPLIER_PAYMENT"
+
+    @@type("pg/text@1")
+}
+
+// One balanced posting: its lines' debits always equal its credits
+model JournalEntry {
+    id String @id @default(uuid())
+
+    source JournalSource
+    // What people quote: a GRN number, a sale number, "REG-2/2026-09-30"
+    reference   String
+    description String
+    storeCode   String?
+    // When it happened in the business, not when this service heard about it
+    occurredAt TimestamptzString
+
+    createdAt TimestamptzString @default(now())
+
+    lines JournalLine[]
+
+    @@index([occurredAt])
+    @@index([source])
+}
+
+// A debit or a credit to one account. Exactly one of the two is non-zero.
+model JournalLine {
+    id             String @id @default(uuid())
+    journalEntryId String
+
+    // A code from the chart of accounts in src/ledger/accounts.ts
+    accountCode String
+    debitCents  Int    @default(0)
+    creditCents Int    @default(0)
+    // Copied from the entry so balances "as of a date" need no join
+    occurredAt TimestamptzString
+
+    entry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+
+    @@index([accountCode, occurredAt])
+}
+
+// An approved purchase order: money the business has promised but does not owe yet.
+// Also where a bill finds its supplier and payment terms, which GoodsReceived leaves out.
+model PurchaseCommitment {
+    purchaseOrderId     String @id
+    purchaseOrderNumber String
+    supplierId          String
+    supplierName        String
+    // Locked onto the order, e.g. "NET_30" or "COD"
+    paymentTerms String
+    totalCents   Int
+    // Raised as goods arrive; the rest is still to come
+    receivedCents Int @default(0)
+    approvedAt    TimestamptzString
+
+    createdAt TimestamptzString @default(now())
+}
+
+// OPEN: something is still owed. PAID: settled in full.
+enum BillStatus {
+    OPEN = "OPEN"
+    PAID = "PAID"
+
+    @@type("pg/text@1")
+}
+
+// What we owe a supplier for one delivery (one goods received note)
+model SupplierBill {
+    id String @id @default(uuid())
+
+    goodsReceivedNoteNumber String @unique
+    purchaseOrderId         String
+    purchaseOrderNumber     String
+
+    // Null until the purchase order's approval has been seen: the bill is still owed,
+    // but nobody yet knows to whom or by when
+    supplierId   String?
+    supplierName String?
+    paymentTerms String?
+    // e.g. "2026-10-28"; the day it was received plus the payment terms
+    dueDate String?
+
+    amountCents Int
+    paidCents   Int        @default(0)
+    status      BillStatus @default(OPEN)
+    receivedAt  TimestamptzString
+
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    payments SupplierPayment[]
+
+    @@index([status, dueDate])
+    @@index([supplierId])
+    @@index([purchaseOrderId])
+}
+
+// Money paid towards a bill
+model SupplierPayment {
+    id             String @id @default(uuid())
+    supplierBillId String
+    journalEntryId String
+
+    amountCents Int
+    // The bank's or the cheque's reference, if there is one
+    reference String?
+    paidAt    TimestamptzString
+    paidBy    String
+
+    createdAt TimestamptzString @default(now())
+
+    bill SupplierBill @relation(fields: [supplierBillId], references: [id], onDelete: Cascade)
+}
+
+// PENDING: revenue is booked, the cost is not (Inventory has not answered yet).
+// COSTED: cost of goods sold is booked too.
+enum CostStatus {
+    PENDING = "PENDING"
+    COSTED  = "COSTED"
+
+    @@type("pg/text@1")
+}
+
+// A sale from Point of Sale, kept so profit can be reported by product and store
+model Sale {
+    id String @id @default(uuid())
+
+    saleNumber   String @unique
+    storeCode    String
+    registerCode String
+    soldAt       TimestamptzString
+
+    // What the customer paid, the VAT inside it, and what is left as revenue
+    totalCents Int
+    taxCents   Int
+    netCents   Int
+
+    costStatus    CostStatus @default(PENDING)
+    costCents     Int?
+    costAttempts  Int        @default(0)
+    lastCostError String?
+
+    createdAt TimestamptzString @default(now())
+
+    products SaleProduct[]
+
+    @@index([costStatus])
+    @@index([soldAt])
+}
+
+// One product on a sale. Revenue is net of VAT; cost is filled in once known.
+model SaleProduct {
+    id     String @id @default(uuid())
+    saleId String
+
+    productId   String
+    sku         String
+    productName String
+    quantity    Int
+
+    revenueCents Int
+    // Inventory's average cost when the sale was costed
+    unitCostCents Int?
+    costCents     Int?
+
+    // Copied from the sale so reports by store and date need no join
+    storeCode String
+    soldAt    TimestamptzString
+
+    sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+    @@index([sku])
+    @@index([storeCode, soldAt])
+}
+
+// Events already handled, so a redelivered event is booked once
+model ProcessedEvent {
+    // The eventId from the envelope
+    id        String @id
+    eventType String
+
+    handledAt TimestamptzString @default(now())
+}

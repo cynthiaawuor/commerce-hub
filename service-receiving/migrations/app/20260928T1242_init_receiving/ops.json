@@ -1,0 +1,661 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.expectedDelivery",
+    "label": "Create table \"expectedDelivery\"",
+    "summary": "Creates table \"expectedDelivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "expectedDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"expectedDelivery\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"expectedDelivery\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"expectedDelivery\"",
+        "sql": "CREATE TABLE \"public\".\"expectedDelivery\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"poNumber\" text NOT NULL,\n  \"purchaseOrderId\" text NOT NULL,\n  \"status\" text DEFAULT 'OPEN' NOT NULL,\n  \"supplierId\" text NOT NULL,\n  \"supplierName\" text NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"expectedDelivery_status_check_32214e16\" CHECK (\"status\" IN ('OPEN', 'CLOSED'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"expectedDelivery\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"expectedDelivery\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.expectedProduct",
+    "label": "Create table \"expectedProduct\"",
+    "summary": "Creates table \"expectedProduct\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "expectedProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"expectedProduct\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"expectedProduct\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"expectedProduct\"",
+        "sql": "CREATE TABLE \"public\".\"expectedProduct\" (\n  \"expectedDeliveryId\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"productId\" text NOT NULL,\n  \"productName\" text NOT NULL,\n  \"quantityOrdered\" int4 NOT NULL,\n  \"quantityReceived\" int4 DEFAULT 0 NOT NULL,\n  \"unitCostCents\" int4 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"expectedProduct\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"expectedProduct\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.goodsReceivedNote",
+    "label": "Create table \"goodsReceivedNote\"",
+    "summary": "Creates table \"goodsReceivedNote\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "goodsReceivedNote"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"goodsReceivedNote\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"goodsReceivedNote\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"goodsReceivedNote\"",
+        "sql": "CREATE TABLE \"public\".\"goodsReceivedNote\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"expectedDeliveryId\" text NOT NULL,\n  \"goodsReceivedNoteNumber\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"locationCode\" text NOT NULL,\n  \"notes\" text,\n  \"poNumber\" text NOT NULL,\n  \"purchaseOrderId\" text NOT NULL,\n  \"receivedBy\" text NOT NULL,\n  \"supplierId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"goodsReceivedNote\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"goodsReceivedNote\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.goodsReceivedNoteProduct",
+    "label": "Create table \"goodsReceivedNoteProduct\"",
+    "summary": "Creates table \"goodsReceivedNoteProduct\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "goodsReceivedNoteProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"goodsReceivedNoteProduct\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"goodsReceivedNoteProduct\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"goodsReceivedNoteProduct\"",
+        "sql": "CREATE TABLE \"public\".\"goodsReceivedNoteProduct\" (\n  \"discrepancy\" text NOT NULL,\n  \"goodsReceivedNoteId\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"productId\" text NOT NULL,\n  \"productName\" text NOT NULL,\n  \"quantityAccepted\" int4 NOT NULL,\n  \"quantityDamaged\" int4 DEFAULT 0 NOT NULL,\n  \"quantityDelivered\" int4 NOT NULL,\n  \"quantityExpected\" int4 NOT NULL,\n  \"unitCostCents\" int4 NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"goodsReceivedNoteProduct_discrepancy_check_12e0bbed\" CHECK (\"discrepancy\" IN ('NONE', 'LESS', 'MORE', 'NOT_ORDERED'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"goodsReceivedNoteProduct\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"goodsReceivedNoteProduct\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.outboxEvent",
+    "label": "Create table \"outboxEvent\"",
+    "summary": "Creates table \"outboxEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "outboxEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"outboxEvent\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"outboxEvent\"",
+        "sql": "CREATE TABLE \"public\".\"outboxEvent\" (\n  \"aggregateId\" text NOT NULL,\n  \"attempts\" int4 DEFAULT 0 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deadAt\" timestamptz,\n  \"eventType\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"lastError\" text,\n  \"nextAttemptAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"payload\" text NOT NULL,\n  \"publishedAt\" timestamptz,\n  \"status\" text DEFAULT 'PENDING' NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"outboxEvent_status_check_3f162824\" CHECK (\"status\" IN ('PENDING', 'PUBLISHED', 'DEAD'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"outboxEvent\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.processedEvent",
+    "label": "Create table \"processedEvent\"",
+    "summary": "Creates table \"processedEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "processedEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"processedEvent\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"processedEvent\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"processedEvent\"",
+        "sql": "CREATE TABLE \"public\".\"processedEvent\" (\n  \"eventType\" text NOT NULL,\n  \"handledAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"processedEvent\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"processedEvent\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.expectedDelivery.expectedDelivery_purchaseOrderId_key",
+    "label": "Add unique constraint on \"expectedDelivery\" (purchaseOrderId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "expectedDelivery_purchaseOrderId_key",
+        "table": "expectedDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"expectedDelivery_purchaseOrderId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "expectedDelivery_purchaseOrderId_key",
+          "public",
+          "\"public\".\"expectedDelivery\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"expectedDelivery_purchaseOrderId_key\"",
+        "sql": "ALTER TABLE \"public\".\"expectedDelivery\" ADD CONSTRAINT \"expectedDelivery_purchaseOrderId_key\" UNIQUE (\"purchaseOrderId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"expectedDelivery_purchaseOrderId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "expectedDelivery_purchaseOrderId_key",
+          "public",
+          "\"public\".\"expectedDelivery\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.expectedProduct.expectedProduct_expectedDeliveryId_productId_key",
+    "label": "Add unique constraint on \"expectedProduct\" (expectedDeliveryId, productId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "expectedProduct_expectedDeliveryId_productId_key",
+        "table": "expectedProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"expectedProduct_expectedDeliveryId_productId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "expectedProduct_expectedDeliveryId_productId_key",
+          "public",
+          "\"public\".\"expectedProduct\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"expectedProduct_expectedDeliveryId_productId_key\"",
+        "sql": "ALTER TABLE \"public\".\"expectedProduct\" ADD CONSTRAINT \"expectedProduct_expectedDeliveryId_productId_key\" UNIQUE (\"expectedDeliveryId\", \"productId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"expectedProduct_expectedDeliveryId_productId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "expectedProduct_expectedDeliveryId_productId_key",
+          "public",
+          "\"public\".\"expectedProduct\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.goodsReceivedNote.goodsReceivedNote_goodsReceivedNoteNumber_key",
+    "label": "Add unique constraint on \"goodsReceivedNote\" (goodsReceivedNoteNumber)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "goodsReceivedNote_goodsReceivedNoteNumber_key",
+        "table": "goodsReceivedNote"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"goodsReceivedNote_goodsReceivedNoteNumber_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "goodsReceivedNote_goodsReceivedNoteNumber_key",
+          "public",
+          "\"public\".\"goodsReceivedNote\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"goodsReceivedNote_goodsReceivedNoteNumber_key\"",
+        "sql": "ALTER TABLE \"public\".\"goodsReceivedNote\" ADD CONSTRAINT \"goodsReceivedNote_goodsReceivedNoteNumber_key\" UNIQUE (\"goodsReceivedNoteNumber\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"goodsReceivedNote_goodsReceivedNoteNumber_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "goodsReceivedNote_goodsReceivedNoteNumber_key",
+          "public",
+          "\"public\".\"goodsReceivedNote\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.expectedProduct.expectedProduct_expectedDeliveryId_idx_f6880cbc",
+    "label": "Create index \"expectedProduct_expectedDeliveryId_idx_f6880cbc\" on \"expectedProduct\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "expectedProduct_expectedDeliveryId_idx_f6880cbc",
+        "table": "expectedProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"expectedProduct_expectedDeliveryId_idx_f6880cbc\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"expectedProduct_expectedDeliveryId_idx_f6880cbc\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"expectedProduct_expectedDeliveryId_idx_f6880cbc\"",
+        "sql": "CREATE INDEX \"expectedProduct_expectedDeliveryId_idx_f6880cbc\" ON \"public\".\"expectedProduct\" (\"expectedDeliveryId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"expectedProduct_expectedDeliveryId_idx_f6880cbc\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"expectedProduct_expectedDeliveryId_idx_f6880cbc\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.goodsReceivedNote.goodsReceivedNote_expectedDeliveryId_idx_f6880cbc",
+    "label": "Create index \"goodsReceivedNote_expectedDeliveryId_idx_f6880cbc\" on \"goodsReceivedNote\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "goodsReceivedNote_expectedDeliveryId_idx_f6880cbc",
+        "table": "goodsReceivedNote"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"goodsReceivedNote_expectedDeliveryId_idx_f6880cbc\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"goodsReceivedNote_expectedDeliveryId_idx_f6880cbc\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"goodsReceivedNote_expectedDeliveryId_idx_f6880cbc\"",
+        "sql": "CREATE INDEX \"goodsReceivedNote_expectedDeliveryId_idx_f6880cbc\" ON \"public\".\"goodsReceivedNote\" (\"expectedDeliveryId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"goodsReceivedNote_expectedDeliveryId_idx_f6880cbc\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"goodsReceivedNote_expectedDeliveryId_idx_f6880cbc\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.goodsReceivedNoteProduct.goodsReceivedNoteProduct_goodsReceivedNoteId_idx_05284e9f",
+    "label": "Create index \"goodsReceivedNoteProduct_goodsReceivedNoteId_idx_05284e9f\" on \"goodsReceivedNoteProduct\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "goodsReceivedNoteProduct_goodsReceivedNoteId_idx_05284e9f",
+        "table": "goodsReceivedNoteProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"goodsReceivedNoteProduct_goodsReceivedNoteId_idx_05284e9f\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"goodsReceivedNoteProduct_goodsReceivedNoteId_idx_05284e9f\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"goodsReceivedNoteProduct_goodsReceivedNoteId_idx_05284e9f\"",
+        "sql": "CREATE INDEX \"goodsReceivedNoteProduct_goodsReceivedNoteId_idx_05284e9f\" ON \"public\".\"goodsReceivedNoteProduct\" (\"goodsReceivedNoteId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"goodsReceivedNoteProduct_goodsReceivedNoteId_idx_05284e9f\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"goodsReceivedNoteProduct_goodsReceivedNoteId_idx_05284e9f\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.outboxEvent.outboxEvent_status_nextAttemptAt_idx_8ba20615",
+    "label": "Create index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" on \"outboxEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "outboxEvent_status_nextAttemptAt_idx_8ba20615",
+        "table": "outboxEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent_status_nextAttemptAt_idx_8ba20615\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\"",
+        "sql": "CREATE INDEX \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" ON \"public\".\"outboxEvent\" (\"status\", \"nextAttemptAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"outboxEvent_status_nextAttemptAt_idx_8ba20615\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"outboxEvent_status_nextAttemptAt_idx_8ba20615\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.expectedProduct.expectedProduct_expectedDeliveryId_fkey",
+    "label": "Add foreign key \"expectedProduct_expectedDeliveryId_fkey\" on \"expectedProduct\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "expectedProduct_expectedDeliveryId_fkey",
+        "table": "expectedProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"expectedProduct_expectedDeliveryId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "expectedProduct_expectedDeliveryId_fkey",
+          "public",
+          "\"public\".\"expectedProduct\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"expectedProduct_expectedDeliveryId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"expectedProduct\"\nADD CONSTRAINT \"expectedProduct_expectedDeliveryId_fkey\"\nFOREIGN KEY (\"expectedDeliveryId\")\nREFERENCES \"public\".\"expectedDelivery\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"expectedProduct_expectedDeliveryId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "expectedProduct_expectedDeliveryId_fkey",
+          "public",
+          "\"public\".\"expectedProduct\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.goodsReceivedNote.goodsReceivedNote_expectedDeliveryId_fkey",
+    "label": "Add foreign key \"goodsReceivedNote_expectedDeliveryId_fkey\" on \"goodsReceivedNote\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "goodsReceivedNote_expectedDeliveryId_fkey",
+        "table": "goodsReceivedNote"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"goodsReceivedNote_expectedDeliveryId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "goodsReceivedNote_expectedDeliveryId_fkey",
+          "public",
+          "\"public\".\"goodsReceivedNote\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"goodsReceivedNote_expectedDeliveryId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"goodsReceivedNote\"\nADD CONSTRAINT \"goodsReceivedNote_expectedDeliveryId_fkey\"\nFOREIGN KEY (\"expectedDeliveryId\")\nREFERENCES \"public\".\"expectedDelivery\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"goodsReceivedNote_expectedDeliveryId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "goodsReceivedNote_expectedDeliveryId_fkey",
+          "public",
+          "\"public\".\"goodsReceivedNote\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.goodsReceivedNoteProduct.goodsReceivedNoteProduct_goodsReceivedNoteId_fkey",
+    "label": "Add foreign key \"goodsReceivedNoteProduct_goodsReceivedNoteId_fkey\" on \"goodsReceivedNoteProduct\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "goodsReceivedNoteProduct_goodsReceivedNoteId_fkey",
+        "table": "goodsReceivedNoteProduct"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"goodsReceivedNoteProduct_goodsReceivedNoteId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "goodsReceivedNoteProduct_goodsReceivedNoteId_fkey",
+          "public",
+          "\"public\".\"goodsReceivedNoteProduct\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"goodsReceivedNoteProduct_goodsReceivedNoteId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"goodsReceivedNoteProduct\"\nADD CONSTRAINT \"goodsReceivedNoteProduct_goodsReceivedNoteId_fkey\"\nFOREIGN KEY (\"goodsReceivedNoteId\")\nREFERENCES \"public\".\"goodsReceivedNote\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"goodsReceivedNoteProduct_goodsReceivedNoteId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "goodsReceivedNoteProduct_goodsReceivedNoteId_fkey",
+          "public",
+          "\"public\".\"goodsReceivedNoteProduct\""
+        ]
+      }
+    ]
+  }
+]

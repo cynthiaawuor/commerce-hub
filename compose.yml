@@ -24,6 +24,45 @@ services:
     networks:
       - procurement_network
 
+  # Inventory's private database, on its own network so no other service can reach it
+  inventory-db:
+    image: postgres:18
+    container_name: inventory_postgres
+    environment:
+      POSTGRES_DB: service-inventory
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5436:5432'
+    networks:
+      - inventory_network
+
+  # Receiving's private database, on its own network so no other service can reach it
+  receiving-db:
+    image: postgres:18
+    container_name: receiving_postgres
+    environment:
+      POSTGRES_DB: service-receiving
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5437:5432'
+    networks:
+      - receiving_network
+
+  # Warehouse Operations' private database, on its own network like the others
+  warehouse-db:
+    image: postgres:18
+    container_name: warehouse_postgres
+    environment:
+      POSTGRES_DB: service-warehouse
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5438:5432'
+    networks:
+      - warehouse_network
+
   # Point of Sale's private database, on its own network like the others
   pos-db:
     image: postgres:18
@@ -36,6 +75,32 @@ services:
       - '5439:5432'
     networks:
       - pos_network
+
+  # Sales Audit's private database, on its own network like the others
+  sales-audit-db:
+    image: postgres:18
+    container_name: sales_audit_postgres
+    environment:
+      POSTGRES_DB: service-sales-audit
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5440:5432'
+    networks:
+      - sales_audit_network
+
+  # Financials' private database, on its own network like the others
+  financials-db:
+    image: postgres:18
+    container_name: financials_postgres
+    environment:
+      POSTGRES_DB: service-financials
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5441:5432'
+    networks:
+      - financials_network
 
   # Event bus. Every service publishes domain events here; subscribers read at their own
   # pace, and a durable queue holds messages while a subscriber is down.
@@ -50,8 +115,7 @@ services:
       # Management UI at http://localhost:15672 (guest/guest)
       - '15672:15672'
     healthcheck:
-      # Run as the rabbitmq user: as root it would create a root-owned .erlang.cookie
-      # that the server (running as rabbitmq) then cannot read
+      # Run as the rabbitmq user
       test: ['CMD-SHELL', 'gosu rabbitmq rabbitmq-diagnostics -q ping']
       interval: 10s
       timeout: 5s
@@ -62,5 +126,10 @@ services:
 networks:
   vendor_network: {}
   procurement_network: {}
+  warehouse_network: {}
   pos_network: {}
+  sales_audit_network: {}
+  financials_network: {}
   events_network: {}
+  inventory_network: {}
+  receiving_network: {}

@@ -1,0 +1,1886 @@
+{
+  "schemaVersion": "1",
+  "targetFamily": "sql",
+  "target": "postgres",
+  "profileHash": "3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2",
+  "roots": {
+    "journalEntry": {
+      "model": "JournalEntry",
+      "namespace": "public"
+    },
+    "journalLine": {
+      "model": "JournalLine",
+      "namespace": "public"
+    },
+    "processedEvent": {
+      "model": "ProcessedEvent",
+      "namespace": "public"
+    },
+    "purchaseCommitment": {
+      "model": "PurchaseCommitment",
+      "namespace": "public"
+    },
+    "sale": {
+      "model": "Sale",
+      "namespace": "public"
+    },
+    "saleProduct": {
+      "model": "SaleProduct",
+      "namespace": "public"
+    },
+    "supplierBill": {
+      "model": "SupplierBill",
+      "namespace": "public"
+    },
+    "supplierPayment": {
+      "model": "SupplierPayment",
+      "namespace": "public"
+    }
+  },
+  "domain": {
+    "namespaces": {
+      "public": {
+        "enum": {
+          "BillStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "OPEN",
+                "value": "OPEN"
+              },
+              {
+                "name": "PAID",
+                "value": "PAID"
+              }
+            ]
+          },
+          "CostStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "PENDING",
+                "value": "PENDING"
+              },
+              {
+                "name": "COSTED",
+                "value": "COSTED"
+              }
+            ]
+          },
+          "JournalSource": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "GOODS_RECEIVED",
+                "value": "GOODS_RECEIVED"
+              },
+              {
+                "name": "SALE",
+                "value": "SALE"
+              },
+              {
+                "name": "SALE_COST",
+                "value": "SALE_COST"
+              },
+              {
+                "name": "DAY_CLOSED",
+                "value": "DAY_CLOSED"
+              },
+              {
+                "name": "SUPPLIER_PAYMENT",
+                "value": "SUPPLIER_PAYMENT"
+              }
+            ]
+          }
+        },
+        "models": {
+          "JournalEntry": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "description": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "occurredAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "reference": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "source": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "JournalSource",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "storeCode": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "lines": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "journalEntryId"
+                  ]
+                },
+                "to": {
+                  "model": "JournalLine",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "description": {
+                  "column": "description"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "occurredAt": {
+                  "column": "occurredAt"
+                },
+                "reference": {
+                  "column": "reference"
+                },
+                "source": {
+                  "column": "source"
+                },
+                "storeCode": {
+                  "column": "storeCode"
+                }
+              },
+              "namespaceId": "public",
+              "table": "journalEntry"
+            }
+          },
+          "JournalLine": {
+            "fields": {
+              "accountCode": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "creditCents": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "debitCents": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "journalEntryId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "occurredAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "entry": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "journalEntryId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "JournalEntry",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "accountCode": {
+                  "column": "accountCode"
+                },
+                "creditCents": {
+                  "column": "creditCents"
+                },
+                "debitCents": {
+                  "column": "debitCents"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "journalEntryId": {
+                  "column": "journalEntryId"
+                },
+                "occurredAt": {
+                  "column": "occurredAt"
+                }
+              },
+              "namespaceId": "public",
+              "table": "journalLine"
+            }
+          },
+          "ProcessedEvent": {
+            "fields": {
+              "eventType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "handledAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "eventType": {
+                  "column": "eventType"
+                },
+                "handledAt": {
+                  "column": "handledAt"
+                },
+                "id": {
+                  "column": "id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "processedEvent"
+            }
+          },
+          "PurchaseCommitment": {
+            "fields": {
+              "approvedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "paymentTerms": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "purchaseOrderId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "purchaseOrderNumber": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "receivedCents": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "supplierId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "supplierName": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "totalCents": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "approvedAt": {
+                  "column": "approvedAt"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "paymentTerms": {
+                  "column": "paymentTerms"
+                },
+                "purchaseOrderId": {
+                  "column": "purchaseOrderId"
+                },
+                "purchaseOrderNumber": {
+                  "column": "purchaseOrderNumber"
+                },
+                "receivedCents": {
+                  "column": "receivedCents"
+                },
+                "supplierId": {
+                  "column": "supplierId"
+                },
+                "supplierName": {
+                  "column": "supplierName"
+                },
+                "totalCents": {
+                  "column": "totalCents"
+                }
+              },
+              "namespaceId": "public",
+              "table": "purchaseCommitment"
+            }
+          },
+          "Sale": {
+            "fields": {
+              "costAttempts": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "costCents": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "costStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "CostStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastCostError": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "netCents": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "registerCode": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "saleNumber": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "soldAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "storeCode": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "taxCents": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "totalCents": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "products": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "saleId"
+                  ]
+                },
+                "to": {
+                  "model": "SaleProduct",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "costAttempts": {
+                  "column": "costAttempts"
+                },
+                "costCents": {
+                  "column": "costCents"
+                },
+                "costStatus": {
+                  "column": "costStatus"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "lastCostError": {
+                  "column": "lastCostError"
+                },
+                "netCents": {
+                  "column": "netCents"
+                },
+                "registerCode": {
+                  "column": "registerCode"
+                },
+                "saleNumber": {
+                  "column": "saleNumber"
+                },
+                "soldAt": {
+                  "column": "soldAt"
+                },
+                "storeCode": {
+                  "column": "storeCode"
+                },
+                "taxCents": {
+                  "column": "taxCents"
+                },
+                "totalCents": {
+                  "column": "totalCents"
+                }
+              },
+              "namespaceId": "public",
+              "table": "sale"
+            }
+          },
+          "SaleProduct": {
+            "fields": {
+              "costCents": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "productId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "productName": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "quantity": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "revenueCents": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "saleId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "sku": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "soldAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "storeCode": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "unitCostCents": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "sale": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "saleId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Sale",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "costCents": {
+                  "column": "costCents"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "productId": {
+                  "column": "productId"
+                },
+                "productName": {
+                  "column": "productName"
+                },
+                "quantity": {
+                  "column": "quantity"
+                },
+                "revenueCents": {
+                  "column": "revenueCents"
+                },
+                "saleId": {
+                  "column": "saleId"
+                },
+                "sku": {
+                  "column": "sku"
+                },
+                "soldAt": {
+                  "column": "soldAt"
+                },
+                "storeCode": {
+                  "column": "storeCode"
+                },
+                "unitCostCents": {
+                  "column": "unitCostCents"
+                }
+              },
+              "namespaceId": "public",
+              "table": "saleProduct"
+            }
+          },
+          "SupplierBill": {
+            "fields": {
+              "amountCents": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "dueDate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "goodsReceivedNoteNumber": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "paidCents": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "paymentTerms": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "purchaseOrderId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "purchaseOrderNumber": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "receivedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "BillStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "supplierId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "supplierName": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "payments": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "supplierBillId"
+                  ]
+                },
+                "to": {
+                  "model": "SupplierPayment",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "amountCents": {
+                  "column": "amountCents"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "dueDate": {
+                  "column": "dueDate"
+                },
+                "goodsReceivedNoteNumber": {
+                  "column": "goodsReceivedNoteNumber"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "paidCents": {
+                  "column": "paidCents"
+                },
+                "paymentTerms": {
+                  "column": "paymentTerms"
+                },
+                "purchaseOrderId": {
+                  "column": "purchaseOrderId"
+                },
+                "purchaseOrderNumber": {
+                  "column": "purchaseOrderNumber"
+                },
+                "receivedAt": {
+                  "column": "receivedAt"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "supplierId": {
+                  "column": "supplierId"
+                },
+                "supplierName": {
+                  "column": "supplierName"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                }
+              },
+              "namespaceId": "public",
+              "table": "supplierBill"
+            }
+          },
+          "SupplierPayment": {
+            "fields": {
+              "amountCents": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "journalEntryId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "paidAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "paidBy": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "reference": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "supplierBillId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "bill": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "supplierBillId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "SupplierBill",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "amountCents": {
+                  "column": "amountCents"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "journalEntryId": {
+                  "column": "journalEntryId"
+                },
+                "paidAt": {
+                  "column": "paidAt"
+                },
+                "paidBy": {
+                  "column": "paidBy"
+                },
+                "reference": {
+                  "column": "reference"
+                },
+                "supplierBillId": {
+                  "column": "supplierBillId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "supplierPayment"
+            }
+          }
+        }
+      }
+    }
+  },
+  "storage": {
+    "namespaces": {
+      "public": {
+        "entries": {
+          "table": {
+            "journalEntry": {
+              "checks": [
+                {
+                  "expression": "\"source\" IN ('GOODS_RECEIVED', 'SALE', 'SALE_COST', 'DAY_CLOSED', 'SUPPLIER_PAYMENT')",
+                  "name": "journalEntry_source_check_42ab6a30",
+                  "prefix": "journalEntry_source_check"
+                }
+              ],
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "description": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "occurredAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "reference": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "source": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "JournalSource",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "storeCode": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "occurredAt"
+                  ],
+                  "name": "journalEntry_occurredAt_idx_c6b89167",
+                  "prefix": "journalEntry_occurredAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "source"
+                  ],
+                  "name": "journalEntry_source_idx_c937a07d",
+                  "prefix": "journalEntry_source_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "journalLine": {
+              "columns": {
+                "accountCode": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "creditCents": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "debitCents": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "journalEntryId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "occurredAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "journalEntryId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "journalLine"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "journalEntry"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "accountCode",
+                    "occurredAt"
+                  ],
+                  "name": "journalLine_accountCode_occurredAt_idx_505ed1fa",
+                  "prefix": "journalLine_accountCode_occurredAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "journalEntryId"
+                  ],
+                  "name": "journalLine_journalEntryId_idx_9f65b209",
+                  "prefix": "journalLine_journalEntryId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "processedEvent": {
+              "columns": {
+                "eventType": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "handledAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "purchaseCommitment": {
+              "columns": {
+                "approvedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "paymentTerms": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "purchaseOrderId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "purchaseOrderNumber": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "receivedCents": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "supplierId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "supplierName": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "totalCents": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "purchaseOrderId"
+                ]
+              },
+              "uniques": []
+            },
+            "sale": {
+              "checks": [
+                {
+                  "expression": "\"costStatus\" IN ('PENDING', 'COSTED')",
+                  "name": "sale_costStatus_check_6049b7c3",
+                  "prefix": "sale_costStatus_check"
+                }
+              ],
+              "columns": {
+                "costAttempts": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "costCents": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": true
+                },
+                "costStatus": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "PENDING"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "CostStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "lastCostError": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "netCents": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "registerCode": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "saleNumber": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "soldAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "storeCode": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "taxCents": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "totalCents": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "costStatus"
+                  ],
+                  "name": "sale_costStatus_idx_223aba25",
+                  "prefix": "sale_costStatus_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "soldAt"
+                  ],
+                  "name": "sale_soldAt_idx_a04fbeab",
+                  "prefix": "sale_soldAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "saleNumber"
+                  ]
+                }
+              ]
+            },
+            "saleProduct": {
+              "columns": {
+                "costCents": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "productId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "productName": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "quantity": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "revenueCents": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "saleId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "sku": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "soldAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "storeCode": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "unitCostCents": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "saleId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "saleProduct"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "sale"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "saleId"
+                  ],
+                  "name": "saleProduct_saleId_idx_b4c0fb73",
+                  "prefix": "saleProduct_saleId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "sku"
+                  ],
+                  "name": "saleProduct_sku_idx_506e4b93",
+                  "prefix": "saleProduct_sku_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "storeCode",
+                    "soldAt"
+                  ],
+                  "name": "saleProduct_storeCode_soldAt_idx_8e178b83",
+                  "prefix": "saleProduct_storeCode_soldAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "supplierBill": {
+              "checks": [
+                {
+                  "expression": "\"status\" IN ('OPEN', 'PAID')",
+                  "name": "supplierBill_status_check_f6faacac",
+                  "prefix": "supplierBill_status_check"
+                }
+              ],
+              "columns": {
+                "amountCents": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "dueDate": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "goodsReceivedNoteNumber": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "paidCents": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "paymentTerms": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "purchaseOrderId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "purchaseOrderNumber": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "receivedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "OPEN"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "BillStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "supplierId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "supplierName": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "purchaseOrderId"
+                  ],
+                  "name": "supplierBill_purchaseOrderId_idx_3e3a8c45",
+                  "prefix": "supplierBill_purchaseOrderId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "status",
+                    "dueDate"
+                  ],
+                  "name": "supplierBill_status_dueDate_idx_ec56e113",
+                  "prefix": "supplierBill_status_dueDate_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "supplierId"
+                  ],
+                  "name": "supplierBill_supplierId_idx_c4d9a8b9",
+                  "prefix": "supplierBill_supplierId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "goodsReceivedNoteNumber"
+                  ]
+                }
+              ]
+            },
+            "supplierPayment": {
+              "columns": {
+                "amountCents": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "journalEntryId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "paidAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "paidBy": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "reference": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "supplierBillId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "supplierBillId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "supplierPayment"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "supplierBill"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "supplierBillId"
+                  ],
+                  "name": "supplierPayment_supplierBillId_idx_f6888116",
+                  "prefix": "supplierPayment_supplierBillId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            }
+          },
+          "valueSet": {
+            "BillStatus": {
+              "kind": "valueSet",
+              "values": [
+                "OPEN",
+                "PAID"
+              ]
+            },
+            "CostStatus": {
+              "kind": "valueSet",
+              "values": [
+                "PENDING",
+                "COSTED"
+              ]
+            },
+            "JournalSource": {
+              "kind": "valueSet",
+              "values": [
+                "GOODS_RECEIVED",
+                "SALE",
+                "SALE_COST",
+                "DAY_CLOSED",
+                "SUPPLIER_PAYMENT"
+              ]
+            }
+          }
+        },
+        "id": "public",
+        "kind": "postgres-schema"
+      }
+    },
+    "storageHash": "c4f4694cc346d88bd5c89dbb8315be20399bb6efa153683dd53dd96f7785b6b9"
+  },
+  "execution": {
+    "executionHash": "aef44aafeb4263f4cf2552c32efde12b3f101b33bc2c0acf6e5281a31e90f6c8",
+    "mutations": {
+      "defaults": [
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "journalEntry"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "journalLine"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "sale"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "saleProduct"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "supplierBill"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updatedAt",
+            "namespace": "public",
+            "table": "supplierBill"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "supplierPayment"
+          }
+        }
+      ]
+    }
+  },
+  "capabilities": {
+    "postgres": {
+      "distinctOn": true,
+      "jsonAgg": true,
+      "lateral": true,
+      "limit": true,
+      "orderBy": true,
+      "returning": true
+    },
+    "sql": {
+      "checkConstraint": true,
+      "defaultInInsert": true,
+      "enums": true,
+      "lateral": true,
+      "returning": true,
+      "scalarList": true
+    }
+  },
+  "extensions": {},
+  "meta": {},
+  "_generated": {
+    "warning": "⚠️  GENERATED FILE - DO NOT EDIT",
+    "message": "This file is automatically generated by \"prisma contract emit\".",
+    "regenerate": "To regenerate, run: prisma contract emit"
+  }
+}

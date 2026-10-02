@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_VENDOR_API_URL?: string;
+  readonly VITE_INVENTORY_API_URL?: string;
   readonly VITE_FEATURE_VENDOR_MANAGEMENT?: string;
 }
 

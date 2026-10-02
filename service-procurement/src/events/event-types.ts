@@ -4,7 +4,7 @@ const PURCHASE_ORDER_APPROVED = "PurchaseOrderApproved";
 
 type PurchaseOrderApprovedPayload = {
   purchaseOrderId: string;
-  poNumber: string;
+  purchaseOrderNumber: string;
   supplierId: string;
   supplierName: string;
   paymentTerms: string;
@@ -12,7 +12,7 @@ type PurchaseOrderApprovedPayload = {
   totalCents: number;
   approvedBy: string;
   approvedAt: string;
-  lines: {
+  products: {
     productId: string;
     productName: string;
     quantityOrdered: number;
