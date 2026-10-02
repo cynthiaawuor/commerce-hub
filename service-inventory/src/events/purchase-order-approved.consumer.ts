@@ -19,12 +19,12 @@ const parsePayload = (payload: unknown): PurchaseOrderApprovedPayload => {
   if (
     !candidate ||
     !isText(candidate.purchaseOrderId) ||
-    !isText(candidate.poNumber) ||
-    !Array.isArray(candidate.lines) ||
-    candidate.lines.length === 0
+    !isText(candidate.purchaseOrderNumber) ||
+    !Array.isArray(candidate.products) ||
+    candidate.products.length === 0
   ) {
     throw new PermanentEventError(
-      "PurchaseOrderApproved payload is missing an order or its lines",
+      "PurchaseOrderApproved payload is missing an order or its products",
     );
   }
 
@@ -40,24 +40,24 @@ const handlePurchaseOrderApproved = async (envelope: EventEnvelope) => {
   const payload = parsePayload(envelope.payload);
   const locationId = await findLocationId(config.defaultLocationCode);
 
-  const lines = [];
-  for (const line of payload.lines) {
-    lines.push({
-      productId: await findProductId(line.productId),
+  const ordered = [];
+  for (const product of payload.products) {
+    ordered.push({
+      productId: await findProductId(product.productId),
       locationId,
-      quantity: line.quantityOrdered,
+      quantity: product.quantityOrdered,
     });
   }
 
   const applied = await stockRepository.applyOnOrder(
     envelope.eventId,
     envelope.eventType,
-    lines,
+    ordered,
   );
 
   console.log(
     applied
-      ? `On order raised for ${payload.poNumber} (${lines.length} line(s))`
+      ? `On order raised for ${payload.purchaseOrderNumber} (${ordered.length} product(s))`
       : `Ignored a repeat delivery of ${envelope.eventType} ${envelope.eventId}`,
   );
 };

@@ -12,12 +12,13 @@ type StockLowPayload = {
   reorderQuantity: number;
 };
 
-// Consumed: Procurement announces an order the business has committed to
+// Consumed: Procurement announces an order the business has committed to.
+// Matches contracts/events/purchase-order-approved.md
 type PurchaseOrderApprovedPayload = {
   purchaseOrderId: string;
-  poNumber: string;
+  purchaseOrderNumber: string;
   supplierId: string;
-  lines: {
+  products: {
     productId: string;
     productName: string;
     quantityOrdered: number;
