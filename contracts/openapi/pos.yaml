@@ -1,0 +1,468 @@
+openapi: 3.1.0
+info:
+  title: Point of Sale Service
+  version: 1.0.0
+  description: |
+    What was sold, at what price, and how it was paid.
+
+    The till never counts stock. Each product scanned is **reserved in Inventory at
+    once**, so no other channel can sell the same units while the customer pays. Paying
+    commits the reservations (stock actually leaves) and publishes `ItemSold`; see
+    `contracts/events/item-sold.md`. Cancelling gives every reservation back.
+
+    Money is always **integer cents** (KES 180.00 is `18000`). Shelf prices include VAT,
+    so `taxCents` is the VAT inside `totalCents`, not an amount added on top.
+
+    There is no auth service yet: the caller identifies itself with `x-user-id` and
+    `x-user-role` headers.
+servers:
+  - url: http://localhost:3005/pos-api
+    description: Local development
+
+tags:
+  - name: Prices
+  - name: Sales
+  - name: Registers
+  - name: Health
+
+components:
+  parameters:
+    UserId:
+      name: x-user-id
+      in: header
+      required: true
+      schema: { type: string }
+      description: Who is making the request (stands in for authentication)
+    UserRole:
+      name: x-user-role
+      in: header
+      required: false
+      schema: { type: string, enum: [CASHIER, MANAGER], default: CASHIER }
+      description: Only a MANAGER can set prices
+    SaleId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message: { type: string }
+            details:
+              type: object
+              description: Field name to messages, for example `payments[0].amountCents`
+              additionalProperties:
+                type: array
+                items: { type: string }
+
+    ProductPrice:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        productId:
+          type: string
+          description: Inventory's id for the product, copied when the price was set
+        sku: { type: string, example: RICE-1KG }
+        productName: { type: string }
+        priceCents:
+          type: integer
+          description: The shelf price, VAT included
+        updatedBy: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    SaleProduct:
+      type: object
+      description: One scan on a sale; the price is frozen when scanned
+      properties:
+        id: { type: string, format: uuid }
+        saleId: { type: string, format: uuid }
+        productId: { type: string }
+        sku: { type: string }
+        productName: { type: string }
+        quantity: { type: integer }
+        unitPriceCents: { type: integer }
+        totalCents: { type: integer }
+        reservationId:
+          type: string
+          description: Inventory's hold on this stock
+        committedAt:
+          type: [string, 'null']
+          description: Set once Inventory has taken the stock
+        createdAt: { type: string, description: 'When it was scanned; products are listed in this order' }
+
+    Payment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        saleId: { type: string, format: uuid }
+        method: { type: string, enum: [CASH, CARD] }
+        amountCents:
+          type: integer
+          description: What was handed over; change is on the sale
+        createdAt: { type: string }
+
+    Sale:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        saleNumber: { type: string, example: SALE-000007 }
+        storeCode:
+          type: string
+          description: This store's location code in Inventory
+        registerCode: { type: string, example: REG-2 }
+        cashierId: { type: string }
+        status:
+          type: string
+          enum: [OPEN, COMPLETED, CANCELLED]
+        totalCents:
+          type: integer
+          description: Kept up to date as products are scanned
+        taxCents:
+          type: integer
+          description: The VAT inside totalCents
+        paidCents: { type: integer }
+        changeCents:
+          type: integer
+          description: Only ever given from cash
+        completedAt: { type: [string, 'null'] }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+        products:
+          type: array
+          items: { $ref: '#/components/schemas/SaleProduct' }
+        payments:
+          type: array
+          items: { $ref: '#/components/schemas/Payment' }
+
+    Tender:
+      type: object
+      required: [method, amountCents]
+      properties:
+        method: { type: string, enum: [CASH, CARD] }
+        amountCents: { type: integer, minimum: 1 }
+
+    RegisterSummary:
+      type: object
+      description: What a register should hold at the end of a day
+      properties:
+        registerCode: { type: string }
+        date: { type: string, format: date }
+        salesCount: { type: integer }
+        totalCents: { type: integer }
+        cashCents:
+          type: integer
+          description: Cash taken, less change given
+        cardCents: { type: integer }
+
+  responses:
+    SaleResponse:
+      description: The sale as it now stands
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+              data: { $ref: '#/components/schemas/Sale' }
+    NotFound:
+      description: No record with this id
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    InventoryDown:
+      description: Inventory could not be reached; nothing was changed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Is the service up?
+      responses:
+        '200':
+          description: Service status and whether the module's feature flag is on
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  service: { type: string }
+                  enabled: { type: boolean }
+
+  /prices:
+    get:
+      tags: [Prices]
+      summary: Every product the till can sell, by name
+      responses:
+        '200':
+          description: The price list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ProductPrice' }
+
+  /prices/{sku}:
+    put:
+      tags: [Prices]
+      summary: Set a product's shelf price
+      description: |
+        Inventory is asked to confirm the SKU and supplies the product's id and name.
+        Setting a price again replaces the old one.
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/UserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [priceCents]
+              properties:
+                priceCents: { type: integer, minimum: 1 }
+            example: { priceCents: 18000 }
+      responses:
+        '200':
+          description: Price saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/ProductPrice' }
+        '400':
+          description: Invalid price, or missing `x-user-id`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: The caller is not a manager
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Inventory has no product with this SKU
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: The product is no longer sold
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/InventoryDown' }
+
+  /sales:
+    post:
+      tags: [Sales]
+      summary: Start serving a customer
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [registerCode]
+              properties:
+                registerCode:
+                  type: string
+                  maxLength: 20
+                  pattern: '^[A-Z0-9-]+$'
+                  description: Stored in upper case
+            example: { registerCode: REG-2 }
+      responses:
+        '201': { $ref: '#/components/responses/SaleResponse' }
+        '400':
+          description: Invalid register code, or missing `x-user-id`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /sales/{id}:
+    get:
+      tags: [Sales]
+      summary: One sale with its products and payments
+      parameters:
+        - $ref: '#/components/parameters/SaleId'
+      responses:
+        '200': { $ref: '#/components/responses/SaleResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /sales/{id}/products:
+    post:
+      tags: [Sales]
+      summary: Scan a product onto the sale
+      description: |
+        Reserves the stock in Inventory, then adds it to the sale at the current shelf
+        price. Scanning the same product twice adds two entries, each with its own
+        reservation.
+      parameters:
+        - $ref: '#/components/parameters/SaleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, quantity]
+              properties:
+                sku: { type: string, maxLength: 50 }
+                quantity: { type: integer, minimum: 1 }
+            example: { sku: RICE-1KG, quantity: 2 }
+      responses:
+        '201': { $ref: '#/components/responses/SaleResponse' }
+        '400':
+          description: Invalid SKU or quantity
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Unknown sale, or no price is set for this SKU
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: |
+            The sale is not open, or Inventory has too little stock. Inventory's own
+            message is passed on, e.g. "Only 7 available at this location, 8 requested".
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/InventoryDown' }
+
+  /sales/{id}/products/{saleProductId}:
+    delete:
+      tags: [Sales]
+      summary: Take a product off the sale
+      description: Gives the reserved stock back to Inventory.
+      parameters:
+        - $ref: '#/components/parameters/SaleId'
+        - name: saleProductId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { $ref: '#/components/responses/SaleResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The sale is not open, or this product has already left stock
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/InventoryDown' }
+
+  /sales/{id}/pay:
+    post:
+      tags: [Sales]
+      summary: Take payment and complete the sale
+      description: |
+        Cash, card or both. Change is only ever given from cash, so a card is charged at
+        most what cash has not already covered.
+
+        Each reservation is committed in Inventory and marked as soon as it is, so a
+        payment retried after a failure never sells the same stock twice. The sale, its
+        payments and the `ItemSold` event are then written together.
+      parameters:
+        - $ref: '#/components/parameters/SaleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payments]
+              properties:
+                payments:
+                  type: array
+                  minItems: 1
+                  items: { $ref: '#/components/schemas/Tender' }
+            example:
+              payments:
+                - { method: CASH, amountCents: 50000 }
+                - { method: CARD, amountCents: 45000 }
+      responses:
+        '200': { $ref: '#/components/responses/SaleResponse' }
+        '400':
+          description: Too little money, a card charged for more than is left, or an invalid payment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: |
+            The sale is not open, has no products, or a reservation ran out (Inventory
+            drops a hold after 15 minutes): remove that product and scan it again.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/InventoryDown' }
+
+  /sales/{id}/cancel:
+    post:
+      tags: [Sales]
+      summary: Abandon the sale
+      description: Gives every reservation back to Inventory.
+      parameters:
+        - $ref: '#/components/parameters/SaleId'
+      responses:
+        '200': { $ref: '#/components/responses/SaleResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: |
+            The sale is not open, or part of it has already left stock, in which case
+            the payment must be finished instead.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503': { $ref: '#/components/responses/InventoryDown' }
+
+  /registers/{registerCode}/summary:
+    get:
+      tags: [Registers]
+      summary: What a register sold in a day
+      description: |
+        What Sales Audit asks before a manager signs off a register. Counts completed
+        sales only. A day runs midnight to midnight UTC.
+      parameters:
+        - name: registerCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: date
+          in: query
+          description: Defaults to today
+          schema: { type: string, format: date, example: '2026-09-30' }
+      responses:
+        '200':
+          description: The register's day
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RegisterSummary' }
+        '400':
+          description: The date is not a real date
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }

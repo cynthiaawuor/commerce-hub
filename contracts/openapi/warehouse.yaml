@@ -1,0 +1,280 @@
+openapi: 3.1.0
+info:
+  title: Warehouse Operations Service
+  version: 1.0.0
+  description: |
+    Where goods physically go, and where they can be found again.
+
+    A **shelf location** is one numbered storage spot, usually a shelf position on a rack
+    (`A-01`). A **putaway task** says "take these received goods from the dock and put
+    them on a shelf".
+
+    Putaway tasks are not created through this API. They appear when Receiving publishes
+    `GoodsReceived`; see `contracts/events/goods-received.md`. This service publishes no
+    events.
+
+    Capacity is counted in units, not volume or weight.
+
+    There is no auth service yet: the caller identifies itself with `x-user-id` and
+    `x-user-role` headers.
+servers:
+  - url: http://localhost:3004/warehouse-api
+    description: Local development
+
+tags:
+  - name: Shelf locations
+  - name: Putaway tasks
+  - name: Health
+
+components:
+  parameters:
+    UserId:
+      name: x-user-id
+      in: header
+      required: true
+      schema: { type: string }
+      description: Who is making the request (stands in for authentication)
+    UserRole:
+      name: x-user-role
+      in: header
+      required: false
+      schema: { type: string, enum: [WORKER, SUPERVISOR], default: WORKER }
+      description: Only a SUPERVISOR can add shelf locations
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message: { type: string }
+            details:
+              type: object
+              description: Field name to messages
+              additionalProperties:
+                type: array
+                items: { type: string }
+
+    ShelfProduct:
+      type: object
+      description: A product on a shelf
+      properties:
+        id: { type: string, format: uuid }
+        shelfLocationId: { type: string, format: uuid }
+        productId: { type: string }
+        productName: { type: string }
+        quantity: { type: integer }
+
+    ShelfLocation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: A-01 }
+        zone:
+          type: string
+          example: A
+          description: The area of the warehouse
+        distanceFromDock:
+          type: integer
+          description: Metres a worker walks from the dock; nearer shelves are suggested first
+        capacityUnits: { type: integer }
+        occupiedUnits: { type: integer }
+        freeUnits:
+          type: integer
+          description: capacityUnits minus occupiedUnits
+        products:
+          type: array
+          description: Only on the list response
+          items: { $ref: '#/components/schemas/ShelfProduct' }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    CreateShelfLocation:
+      type: object
+      required: [code, zone, distanceFromDock, capacityUnits]
+      properties:
+        code:
+          type: string
+          maxLength: 20
+          pattern: '^[A-Z0-9-]+$'
+          description: Stored in upper case; must be unique
+        zone: { type: string, maxLength: 20 }
+        distanceFromDock: { type: integer, minimum: 0 }
+        capacityUnits: { type: integer, minimum: 1 }
+
+    PutawayTask:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        goodsReceivedNoteNumber: { type: string, example: GRN-000003 }
+        purchaseOrderNumber: { type: string }
+        productId: { type: string }
+        productName:
+          type: string
+          description: The product id when the event carried no name
+        quantity: { type: integer }
+        status: { type: string, enum: [PENDING, COMPLETED] }
+        suggestedShelfCode:
+          type: [string, 'null']
+          description: |
+            A shelf already holding this product with room for all of it, otherwise the
+            nearest shelf with room. Null when no shelf had room when the goods arrived.
+        shelfCode:
+          type: [string, 'null']
+          description: Where the goods were actually put; null until completed
+        completedBy: { type: [string, 'null'] }
+        completedAt: { type: [string, 'null'] }
+        createdAt: { type: string }
+
+    CompletePutawayTask:
+      type: object
+      properties:
+        shelfCode:
+          type: string
+          maxLength: 20
+          description: Leave out to use the suggested shelf; give one to choose another
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Is the service up?
+      responses:
+        '200':
+          description: Service status and whether the module's feature flag is on
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  service: { type: string }
+                  enabled: { type: boolean }
+
+  /shelf-locations:
+    get:
+      tags: [Shelf locations]
+      summary: Every shelf, with what is on it and the room left
+      description: Nearest the dock first.
+      responses:
+        '200':
+          description: Shelf locations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ShelfLocation' }
+    post:
+      tags: [Shelf locations]
+      summary: Add a shelf location
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/UserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateShelfLocation' }
+            example: { code: C-01, zone: C, distanceFromDock: 50, capacityUnits: 300 }
+      responses:
+        '201':
+          description: Shelf location added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/ShelfLocation' }
+        '400':
+          description: Invalid body, or missing `x-user-id`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: The caller is not a supervisor
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: A shelf with this code already exists
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /putaway-tasks:
+    get:
+      tags: [Putaway tasks]
+      summary: Goods waiting to be shelved, or recently shelved
+      parameters:
+        - name: status
+          in: query
+          description: |
+            PENDING (the default) lists waiting goods oldest first. COMPLETED lists the
+            50 most recently shelved.
+          schema: { type: string, enum: [PENDING, COMPLETED], default: PENDING }
+      responses:
+        '200':
+          description: Putaway tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/PutawayTask' }
+        '400':
+          description: Unknown status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /putaway-tasks/{id}/complete:
+    post:
+      tags: [Putaway tasks]
+      summary: Confirm the goods are on a shelf
+      description: |
+        Marks the task completed, raises the shelf's used space and records the product
+        on the shelf, all together.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CompletePutawayTask' }
+            example: { shelfCode: B-01 }
+      responses:
+        '200':
+          description: Goods put away
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/PutawayTask' }
+        '400':
+          description: No shelf was suggested and none was given, or missing `x-user-id`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Unknown task or shelf
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: The task is already completed, or the shelf has too little room
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
