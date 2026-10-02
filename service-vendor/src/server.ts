@@ -3,12 +3,16 @@ import express from "express";
 import suppliersRouter from "./suppliers/suppliers.router";
 import catalogRouter from "./catalog/catalog.router";
 import productsRouter from "./products/products.router";
+import { mountDocs } from "./core/docs";
 import { errorHandler, notFoundHandler } from "./core/error-handler";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+
+// The contract other teams build against, served from contracts/openapi/vendor.yaml
+mountDocs(app);
 
 app.use("/vendor-api/suppliers/:supplierId/catalog-items", catalogRouter);
 app.use("/vendor-api/suppliers", suppliersRouter);
