@@ -16,9 +16,9 @@ const events = {
     routingKey: "procurement.purchase-order-approved",
     payload: {
       purchaseOrderId: randomUUID(),
-      poNumber: reference.startsWith("PO-") ? reference : "PO-000999",
+      purchaseOrderNumber: reference.startsWith("PO-") ? reference : "PO-000999",
       supplierId: "sup-1",
-      lines: [{
+      products: [{
         productId: product,
         productName: product,
         quantityOrdered: Number(quantity),
