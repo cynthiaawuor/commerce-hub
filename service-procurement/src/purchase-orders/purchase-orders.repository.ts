@@ -1,4 +1,5 @@
 import { claimEvent } from "../events/processed-events.repository";
+import { newOutboxEvent } from "../events/outbox.repository";
 import { db } from "../prisma/db";
 import type { PurchaseOrderStatus } from "./purchase-order-status";
 
@@ -270,11 +271,9 @@ const changeStatus = async (
     });
 
     if (event) {
-      await tx.orm.public.OutboxEvent.create({
-        eventType: event.eventType,
-        aggregateId: event.aggregateId,
-        payload: JSON.stringify(event.payload),
-      });
+      await tx.orm.public.OutboxEvent.create(
+        newOutboxEvent(event.eventType, event.aggregateId, event.payload),
+      );
     }
 
     return updated;

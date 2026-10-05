@@ -1,4 +1,5 @@
 import { DAY_CLOSED, type DayClosedPayload } from "../events/event-types";
+import { newOutboxEvent } from "../events/outbox.repository";
 import { claimEvent } from "../events/processed-events.repository";
 import { db } from "../prisma/db";
 
@@ -106,11 +107,9 @@ const close = async (id: string, closing: Closing, event: DayClosedPayload) =>
       return null;
     }
 
-    await tx.orm.public.OutboxEvent.create({
-      eventType: DAY_CLOSED,
-      aggregateId: `${event.registerCode}/${event.businessDate}`,
-      payload: JSON.stringify(event),
-    });
+    await tx.orm.public.OutboxEvent.create(
+      newOutboxEvent(DAY_CLOSED, `${event.registerCode}/${event.businessDate}`, event),
+    );
 
     return closed;
   });
