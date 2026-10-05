@@ -11,6 +11,11 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
+// Lets Docker and other services check the service is up, without touching the database
+app.get("/vendor-api/health", (_req: Request, res: Response) => {
+  res.status(200).json({ status: "ok", service: "vendor" });
+});
+
 // The contract other teams build against, served from contracts/openapi/vendor.yaml
 mountDocs(app);
 
