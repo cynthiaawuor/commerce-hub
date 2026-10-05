@@ -1,4 +1,5 @@
 import { ITEM_SOLD, type ItemSoldPayload } from "../events/event-types";
+import { newOutboxEvent } from "../events/outbox.repository";
 import { db } from "../prisma/db";
 import { vatInside, type Tender } from "./checkout-rules";
 
@@ -96,11 +97,9 @@ const complete = async (saleId: string, completion: Completion) =>
       await tx.orm.public.Payment.create({ ...tender, saleId });
     }
 
-    await tx.orm.public.OutboxEvent.create({
-      eventType: ITEM_SOLD,
-      aggregateId: completion.event.saleNumber,
-      payload: JSON.stringify(completion.event),
-    });
+    await tx.orm.public.OutboxEvent.create(
+      newOutboxEvent(ITEM_SOLD, completion.event.saleNumber, completion.event),
+    );
 
     return completed;
   });
