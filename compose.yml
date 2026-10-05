@@ -63,6 +63,19 @@ services:
     networks:
       - warehouse_network
 
+  # Point of Sale's private database, on its own network like the others
+  pos-db:
+    image: postgres:18
+    container_name: pos_postgres
+    environment:
+      POSTGRES_DB: service-pos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5439:5432'
+    networks:
+      - pos_network
+
   # Sales Audit's private database, on its own network like the others
   sales-audit-db:
     image: postgres:18
@@ -114,6 +127,7 @@ networks:
   vendor_network: {}
   procurement_network: {}
   warehouse_network: {}
+  pos_network: {}
   sales_audit_network: {}
   financials_network: {}
   events_network: {}
