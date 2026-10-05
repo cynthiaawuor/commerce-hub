@@ -2,6 +2,7 @@ import { isUniqueViolation } from "../core/db-errors";
 import { hasCrossedReorderPoint } from "./stock-low";
 import { claimEvent } from "../events/processed-events.repository";
 import { STOCK_LOW } from "../events/event-types";
+import { newOutboxEvent } from "../events/outbox.repository";
 import { db } from "../prisma/db";
 
 const StockLevel = db.orm.public.StockLevel;
@@ -88,10 +89,8 @@ const raiseStockLowIfCrossed = async (
     .select("code")
     .first();
 
-  await tx.orm.public.OutboxEvent.create({
-    eventType: STOCK_LOW,
-    aggregateId: productId,
-    payload: JSON.stringify({
+  await tx.orm.public.OutboxEvent.create(
+    newOutboxEvent(STOCK_LOW, productId, {
       productId,
       productName: product.name,
       // Other services quote codes rather than our ids
@@ -100,7 +99,7 @@ const raiseStockLowIfCrossed = async (
       reorderPoint: product.reorderPoint,
       reorderQuantity: product.reorderQuantity,
     }),
-  });
+  );
 };
 
 // Stock levels are created when stock first arrives at a location, not up front for

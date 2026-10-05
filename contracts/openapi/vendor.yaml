@@ -1,0 +1,386 @@
+openapi: 3.1.0
+info:
+  title: Vendor Management Service
+  version: 1.0.0
+  description: |
+    The approved suppliers, their payment terms, and what each one sells at what price.
+
+    Vendor Management does not own products (Inventory does). A catalog item says that a
+    supplier can provide one of Inventory's products, at a price and a lead time.
+
+    Unlike the newer services, prices here are **KES as a decimal** (`250.5`), not
+    integer cents. Procurement converts them to cents when it freezes a price onto an order.
+
+    There is no authentication on this service yet.
+servers:
+  - url: http://localhost:3000/vendor-api
+    description: Local development
+
+tags:
+  - name: Suppliers
+  - name: Catalog
+  - name: Products
+
+components:
+  parameters:
+    SupplierId:
+      name: supplierId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message: { type: string }
+            details:
+              type: object
+              description: Field name to messages
+              additionalProperties:
+                type: array
+                items: { type: string }
+
+    Supplier:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email, description: Unique across suppliers }
+        phone: { type: string, example: '+254712345678' }
+        paymentTerms:
+          type: string
+          example: NET_30
+          description: Free text; Financials reads the number of days out of it
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+          description: Procurement only orders from ACTIVE suppliers
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    CreateSupplier:
+      type: object
+      required: [name, email, phone, paymentTerms]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string, description: A valid phone number with country code }
+        paymentTerms: { type: string, example: NET_30 }
+
+    UpdateSupplier:
+      type: object
+      description: Every field is optional; only what is sent is changed
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        paymentTerms: { type: string }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+
+    CatalogItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        supplierId: { type: string, format: uuid }
+        productId:
+          type: string
+          description: Inventory's id for the product
+        name: { type: string }
+        description: { type: string }
+        unitPrice:
+          type: number
+          description: KES, as a decimal
+          example: 250.5
+        leadTimeDays:
+          type: integer
+          description: Days the supplier needs to deliver after an order is placed
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    CreateCatalogItem:
+      type: object
+      required: [productId, name, description, unitPrice, leadTimeDays]
+      properties:
+        productId: { type: string }
+        name: { type: string }
+        description: { type: string }
+        unitPrice: { type: number, exclusiveMinimum: 0 }
+        leadTimeDays: { type: integer, minimum: 0 }
+
+    UpdateCatalogItem:
+      type: object
+      description: Every field is optional; only what is sent is changed
+      properties:
+        productId: { type: string }
+        name: { type: string }
+        description: { type: string }
+        unitPrice: { type: number, exclusiveMinimum: 0 }
+        leadTimeDays: { type: integer, minimum: 0 }
+
+    SupplierOffer:
+      type: object
+      description: One active supplier's offer for a product
+      properties:
+        supplierId: { type: string, format: uuid }
+        supplierName: { type: string }
+        paymentTerms: { type: string }
+        catalogItemId: { type: string, format: uuid }
+        productId: { type: string }
+        productName: { type: string }
+        unitPrice: { type: number, description: 'KES, as a decimal' }
+        leadTimeDays: { type: integer }
+
+  responses:
+    BadRequest:
+      description: The body or query failed validation; `details` names each field
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: No record with this id
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: A unique value is already in use
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+paths:
+  /suppliers:
+    get:
+      tags: [Suppliers]
+      summary: List suppliers, a page at a time
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: search
+          in: query
+          description: Matches name or email, ignoring case
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [ACTIVE, INACTIVE] }
+      responses:
+        '200':
+          description: A page of suppliers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Supplier' }
+                  meta:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      limit: { type: integer }
+                      total: { type: integer }
+                      totalPages: { type: integer }
+        '400': { $ref: '#/components/responses/BadRequest' }
+    post:
+      tags: [Suppliers]
+      summary: Add a supplier
+      description: A new supplier starts as ACTIVE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSupplier' }
+      responses:
+        '201':
+          description: Supplier created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/Supplier' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409':
+          description: Another supplier already uses this email
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /suppliers/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Suppliers]
+      summary: One supplier
+      description: Returned as the supplier object itself, not wrapped in `data`.
+      responses:
+        '200':
+          description: The supplier
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Supplier' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Suppliers]
+      summary: Change a supplier, including making it inactive
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateSupplier' }
+      responses:
+        '200':
+          description: Supplier updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/Supplier' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [Suppliers]
+      summary: Remove a supplier and its catalog
+      responses:
+        '200':
+          description: Supplier deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /suppliers/{supplierId}/catalog-items:
+    parameters:
+      - $ref: '#/components/parameters/SupplierId'
+    get:
+      tags: [Catalog]
+      summary: What a supplier sells
+      description: Returned as a plain array, not wrapped in `data`.
+      responses:
+        '200':
+          description: The supplier's catalog items
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CatalogItem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Catalog]
+      summary: Add a product to a supplier's catalog
+      description: |
+        Known limitation: the database currently allows **one catalog item per supplier**
+        and **one supplier per product**. A second item for the same supplier, or the same
+        product under another supplier, is refused with 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCatalogItem' }
+      responses:
+        '201':
+          description: Catalog item created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/CatalogItem' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /suppliers/{supplierId}/catalog-items/{id}:
+    parameters:
+      - $ref: '#/components/parameters/SupplierId'
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Catalog]
+      summary: One catalog item
+      description: Returned as the item itself, not wrapped in `data`.
+      responses:
+        '200':
+          description: The catalog item
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CatalogItem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Catalog]
+      summary: Change a catalog item, e.g. its price
+      description: Orders already raised keep the price they were raised at.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateCatalogItem' }
+      responses:
+        '200':
+          description: Catalog item updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/CatalogItem' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [Catalog]
+      summary: Remove a product from a supplier's catalog
+      responses:
+        '200':
+          description: Catalog item deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /products/{productId}/suppliers:
+    get:
+      tags: [Products]
+      summary: Which active suppliers can provide a product
+      description: |
+        What Procurement calls when a buyer adds a product to an order. Cheapest first,
+        then the quicker delivery when prices match. Inactive suppliers are left out.
+        Returned as a plain array; empty when nobody sells the product.
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Inventory's id for the product
+          schema: { type: string }
+      responses:
+        '200':
+          description: Offers for the product
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SupplierOffer' }

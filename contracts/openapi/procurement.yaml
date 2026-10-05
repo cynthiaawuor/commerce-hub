@@ -86,10 +86,10 @@ components:
         totalCents:
           type: integer
           description: Sum of quantityOrdered x unitCostCents across the lines
-        notes: { type: string, nullable: true }
+        notes: { type: [string, 'null'] }
         createdBy: { type: string }
-        approvedBy: { type: string, nullable: true }
-        approvedAt: { type: string, nullable: true }
+        approvedBy: { type: [string, 'null'] }
+        approvedAt: { type: [string, 'null'] }
         createdAt: { type: string }
         updatedAt: { type: string }
         lines:
@@ -98,10 +98,10 @@ components:
     StatusChange:
       type: object
       properties:
-        fromStatus: { type: string, nullable: true }
+        fromStatus: { type: [string, 'null'] }
         toStatus: { type: string }
         changedBy: { type: string }
-        reason: { type: string, nullable: true }
+        reason: { type: [string, 'null'] }
         createdAt: { type: string }
     ReorderSuggestion:
       type: object
@@ -114,7 +114,7 @@ components:
         reorderPoint: { type: integer }
         suggestedQuantity: { type: integer }
         status: { type: string, enum: [OPEN, DISMISSED, CONVERTED] }
-        purchaseOrderId: { type: string, nullable: true }
+        purchaseOrderId: { type: [string, 'null'] }
         lastReportedAt: { type: string }
 
   responses:

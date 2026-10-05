@@ -110,12 +110,28 @@ OpenAPI specifications live in [`contracts/openapi/`](contracts/openapi) and eve
 in [`contracts/events/`](contracts/events), so a service's contract is readable without
 reading its code.
 
-- Procurement, live: http://localhost:3001/procurement-api/docs
-- Inventory, live: http://localhost:3002/inventory-api/docs
-- Receiving, live: http://localhost:3003/receiving-api/docs
-- `PurchaseOrderApproved` event: [`contracts/events/purchase-order-approved.md`](contracts/events/purchase-order-approved.md)
-- `StockLow` event: [`contracts/events/stock-low.md`](contracts/events/stock-low.md)
-- `GoodsReceived` event: [`contracts/events/goods-received.md`](contracts/events/goods-received.md)
+Each running service serves its own spec as a browsable page:
+
+| Service | Spec | Live page |
+| --- | --- | --- |
+| Vendor Management | [`vendor.yaml`](contracts/openapi/vendor.yaml) | http://localhost:3000/vendor-api/docs |
+| Procurement | [`procurement.yaml`](contracts/openapi/procurement.yaml) | http://localhost:3001/procurement-api/docs |
+| Inventory | [`inventory.yaml`](contracts/openapi/inventory.yaml) | http://localhost:3002/inventory-api/docs |
+| Receiving | [`receiving.yaml`](contracts/openapi/receiving.yaml) | http://localhost:3003/receiving-api/docs |
+| Warehouse Operations | [`warehouse.yaml`](contracts/openapi/warehouse.yaml) | http://localhost:3004/warehouse-api/docs |
+| Point of Sale | [`pos.yaml`](contracts/openapi/pos.yaml) | http://localhost:3005/pos-api/docs |
+| Sales Audit | [`sales-audit.yaml`](contracts/openapi/sales-audit.yaml) | http://localhost:3006/sales-audit-api/docs |
+| Financials | [`financials.yaml`](contracts/openapi/financials.yaml) | http://localhost:3007/financials-api/docs |
+
+Events, with who publishes and who listens:
+
+| Event | Published by | Consumed by |
+| --- | --- | --- |
+| [`PurchaseOrderApproved`](contracts/events/purchase-order-approved.md) | Procurement | Receiving, Inventory, Financials |
+| [`GoodsReceived`](contracts/events/goods-received.md) | Receiving | Procurement, Inventory, Warehouse Operations, Financials |
+| [`StockLow`](contracts/events/stock-low.md) | Inventory | Procurement |
+| [`ItemSold`](contracts/events/item-sold.md) | Point of Sale | Sales Audit, Financials |
+| [`DayClosed`](contracts/events/day-closed.md) | Sales Audit | Financials |
 
 CI parses every spec and checks its `$ref`s resolve, so a malformed contract fails the
 build rather than surprising someone in a browser.

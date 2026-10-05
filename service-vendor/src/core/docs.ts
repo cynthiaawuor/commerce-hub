@@ -9,31 +9,31 @@ const SPEC_PATH =
   process.env["OPENAPI_SPEC"] ??
   join(
     dirname(fileURLToPath(import.meta.url)),
-    "../../../contracts/openapi/inventory.yaml",
+    "../../../contracts/openapi/vendor.yaml",
   );
 
 // Swagger UI comes from a CDN, so documenting the API costs no runtime dependency.
 const page = `<!doctype html>
 <html>
   <head>
-    <title>Inventory API</title>
+    <title>Vendor Management API</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui.min.css" />
   </head>
   <body>
     <div id="swagger"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui-bundle.min.js"></script>
     <script>
-      SwaggerUIBundle({ url: "/inventory-api/docs/openapi.yaml", dom_id: "#swagger" });
+      SwaggerUIBundle({ url: "/vendor-api/docs/openapi.yaml", dom_id: "#swagger" });
     </script>
   </body>
 </html>`;
 
 const mountDocs = (app: Express) => {
-  app.get("/inventory-api/docs", (_req: Request, res: Response) => {
+  app.get("/vendor-api/docs", (_req: Request, res: Response) => {
     res.type("html").send(page);
   });
 
-  app.get("/inventory-api/docs/openapi.yaml", (_req: Request, res: Response) => {
+  app.get("/vendor-api/docs/openapi.yaml", (_req: Request, res: Response) => {
     try {
       res.type("yaml").send(readFileSync(SPEC_PATH, "utf8"));
     } catch {

@@ -9,6 +9,7 @@ vi.mock("../../src/events/event-publisher", () => ({
 
 import * as eventPublisher from "../../src/events/event-publisher";
 import { BrokerUnavailableError } from "../../src/events/outbox-errors";
+import { findDue, newOutboxEvent } from "../../src/events/outbox.repository";
 import { publishPendingEvents } from "../../src/events/outbox-worker";
 import { db } from "../../src/prisma/db";
 import { resetDatabase } from "./helpers";
@@ -16,11 +17,14 @@ import { resetDatabase } from "./helpers";
 const publish = vi.mocked(eventPublisher.publish);
 const Outbox = db.orm.public.OutboxEvent;
 
+// The payload is written as given, so a test can store one that is not valid JSON.
+// The due time is set the way newOutboxEvent sets it, by Node's clock.
 const insertEvent = (payload: string) =>
   Outbox.create({
     eventType: "PurchaseOrderApproved",
     aggregateId: "po-1",
     payload,
+    nextAttemptAt: new Date().toISOString(),
   });
 
 const reload = async (id: string) => (await Outbox.where({ id }).first())!;
@@ -85,9 +89,23 @@ describe("outbox worker", () => {
 
     await publishPendingEvents();
 
+    // Tried, so the unchanged event is down to the outage, not to being skipped
+    expect(publish).toHaveBeenCalledTimes(1);
     expect(await reload(event.id)).toMatchObject({
       status: "PENDING",
       attempts: 0,
     });
+  });
+
+  // An event written by Postgres's clock (microseconds) and looked for by Node's
+  // (milliseconds) could seem to be due in the future when both happen in the same
+  // millisecond. Fast CI machines hit that now and then, so the case is repeated here.
+  it("finds an event the moment it is written", async () => {
+    for (let i = 0; i < 200; i += 1) {
+      const event = await Outbox.create(newOutboxEvent("PurchaseOrderApproved", "po-1", {}));
+      const due = await findDue(500);
+
+      expect(due.map((row) => row.id)).toContain(event.id);
+    }
   });
 });

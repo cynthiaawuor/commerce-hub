@@ -4,6 +4,17 @@ const OutboxEvent = db.orm.public.OutboxEvent;
 
 const now = () => new Date().toISOString();
 
+// A new event, due now by Node's clock: the same clock findDue compares with. Left to the
+// column's default, the due time would come from Postgres's clock, which keeps
+// microseconds; an event looked for within the same millisecond would then seem to be
+// due in the future and be skipped.
+const newOutboxEvent = (eventType: string, aggregateId: string, payload: unknown) => ({
+  eventType,
+  aggregateId,
+  payload: JSON.stringify(payload),
+  nextAttemptAt: now(),
+});
+
 //events that are waiting and whose retry time has come, oldest first
 const findDue = async (limit: number) =>
   OutboxEvent.where({ status: "PENDING" })
@@ -57,4 +68,4 @@ const requeue = async (id: string) =>
     deadAt: null,
     nextAttemptAt: now(),
   });
-export { findDue, recordFailure, markDead, findDead, requeue, markPublished };
+export { findDue, newOutboxEvent, recordFailure, markDead, findDead, requeue, markPublished };

@@ -4,10 +4,13 @@ import { fileURLToPath } from "node:url";
 import type { Express, Request, Response } from "express";
 
 // The spec is the one in contracts/, shared with every other service, rather than a copy.
-const SPEC_PATH = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../../contracts/openapi/financials.yaml",
-);
+// A container has no repository around it, so the image says where it copied the spec.
+const SPEC_PATH =
+  process.env["OPENAPI_SPEC"] ??
+  join(
+    dirname(fileURLToPath(import.meta.url)),
+    "../../../contracts/openapi/financials.yaml",
+  );
 
 // Swagger UI comes from a CDN, so documenting the API costs no runtime dependency.
 const page = `<!doctype html>

@@ -1,0 +1,623 @@
+openapi: 3.1.0
+info:
+  title: Financials Service
+  version: 1.0.0
+  description: |
+    What the business owns, what it owes, and whether it is making money.
+
+    Nothing is entered here by hand except payments to suppliers. The ledger is built
+    from events the other services publish:
+
+    | Event | What is booked |
+    | --- | --- |
+    | `PurchaseOrderApproved` | A commitment (money promised, not yet owed); no ledger entry |
+    | `GoodsReceived` | Dr Inventory, Cr Accounts payable; a supplier bill with a due date |
+    | `ItemSold` | Dr Cash / Card, Cr VAT payable, Cr Sales revenue; then Dr Cost of goods sold, Cr Inventory |
+    | `DayClosed` | A short or over till, to Cash over / short |
+
+    The cost of goods sold is the product's average cost, asked from Inventory. While
+    Inventory cannot answer, revenue is booked and the sale waits; reports then show
+    `uncostedSales` above zero, meaning profit is overstated until the cost is booked.
+
+    Every journal entry balances: its debits equal its credits. Money is always
+    **integer cents**. Report periods are whole days, midnight to midnight UTC.
+
+    This service publishes no events.
+
+    There is no auth service yet: the caller identifies itself with `x-user-id` and
+    `x-user-role` headers.
+servers:
+  - url: http://localhost:3007/financials-api
+    description: Local development
+
+tags:
+  - name: Reports
+  - name: Supplier bills
+  - name: Ledger
+  - name: Health
+
+components:
+  parameters:
+    UserId:
+      name: x-user-id
+      in: header
+      required: true
+      schema: { type: string }
+      description: Who is making the request (stands in for authentication)
+    UserRole:
+      name: x-user-role
+      in: header
+      required: false
+      schema: { type: string, default: FINANCE }
+      description: Only FINANCE can record a payment to a supplier
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    From:
+      name: from
+      in: query
+      description: First day of the period; defaults to the first of this month
+      schema: { type: string, format: date, example: '2026-09-01' }
+    To:
+      name: to
+      in: query
+      description: Last day of the period, included; defaults to today
+      schema: { type: string, format: date, example: '2026-09-30' }
+    AsOf:
+      name: asOf
+      in: query
+      description: Up to the end of this day; defaults to today
+      schema: { type: string, format: date, example: '2026-09-30' }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message: { type: string }
+            details:
+              type: object
+              description: Field name to messages
+              additionalProperties:
+                type: array
+                items: { type: string }
+
+    ProfitAndLoss:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        revenueCents:
+          type: integer
+          description: Sales, net of VAT
+        costOfGoodsSoldCents: { type: integer }
+        grossProfitCents: { type: integer }
+        grossMarginPercent:
+          type: [number, 'null']
+          description: One decimal place; null when there was no revenue
+        cashOverShortCents:
+          type: integer
+          description: An expense. Positive when tills were short overall, negative when over
+        netProfitCents:
+          type: integer
+          description: Gross profit less cash over / short
+        uncostedSales:
+          type: integer
+          description: Sales in the period still waiting for their cost
+
+    BalanceRow:
+      type: object
+      properties:
+        code: { type: string, description: Absent on equity rows }
+        name: { type: string }
+        balanceCents: { type: integer }
+
+    BalanceSheet:
+      type: object
+      properties:
+        asOf: { type: string, format: date }
+        assets:
+          type: array
+          items: { $ref: '#/components/schemas/BalanceRow' }
+        totalAssetsCents: { type: integer }
+        liabilities:
+          type: array
+          items: { $ref: '#/components/schemas/BalanceRow' }
+        totalLiabilitiesCents: { type: integer }
+        equity:
+          type: array
+          description: Retained earnings only; no capital is recorded
+          items: { $ref: '#/components/schemas/BalanceRow' }
+        totalEquityCents: { type: integer }
+        balanced:
+          type: boolean
+          description: Assets equal liabilities plus equity
+
+    ProfitRow:
+      type: object
+      properties:
+        sku: { type: string, description: Present when grouped by product }
+        productName: { type: string, description: Present when grouped by product }
+        storeCode: { type: string, description: Present when grouped by store }
+        quantity: { type: integer }
+        revenueCents:
+          type: integer
+          description: Net of VAT; a sale's revenue is shared across its products to the cent
+        costCents:
+          type: integer
+          description: Only counts sales already costed
+        grossProfitCents: { type: integer }
+        grossMarginPercent: { type: [number, 'null'] }
+
+    Bill:
+      type: object
+      description: What is owed to a supplier for one delivery
+      properties:
+        id: { type: string, format: uuid }
+        goodsReceivedNoteNumber: { type: string, example: GRN-000003 }
+        purchaseOrderId: { type: string }
+        purchaseOrderNumber: { type: string }
+        supplierId:
+          type: [string, 'null']
+          description: |
+            Null until the purchase order's approval has been seen. The bill is still
+            owed, but it cannot be paid until the supplier is known.
+        supplierName: { type: [string, 'null'] }
+        paymentTerms: { type: [string, 'null'], example: NET_30 }
+        dueDate:
+          type: [string, 'null']
+          format: date
+          description: The day it was received plus the days in the payment terms
+        receivedAt: { type: string }
+        amountCents: { type: integer }
+        paidCents: { type: integer }
+        outstandingCents: { type: integer }
+        status: { type: string, enum: [OPEN, PAID] }
+        daysOverdue:
+          type: integer
+          description: Zero when not yet due
+        ageBucket:
+          type: string
+          enum: [NOT_DUE, '1_30', '31_60', '61_90', OVER_90]
+        createdAt: { type: string }
+        updatedAt: { type: string }
+        payments:
+          type: array
+          description: Only on the single-bill response
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              amountCents: { type: integer }
+              reference: { type: [string, 'null'] }
+              paidAt: { type: string }
+              paidBy: { type: string }
+
+    AgeBuckets:
+      type: object
+      description: Money owed, split by how late it is
+      properties:
+        NOT_DUE: { type: integer }
+        '1_30': { type: integer }
+        '31_60': { type: integer }
+        '61_90': { type: integer }
+        OVER_90: { type: integer }
+
+    SupplierBalance:
+      type: object
+      properties:
+        supplierId: { type: [string, 'null'] }
+        supplierName:
+          type: string
+          description: '"Awaiting purchase order" for bills whose supplier is not known yet'
+        billCount: { type: integer }
+        outstandingCents: { type: integer }
+        overdueCents: { type: integer }
+        nextDueDate: { type: [string, 'null'], format: date }
+        buckets: { $ref: '#/components/schemas/AgeBuckets' }
+
+    Commitment:
+      type: object
+      description: An approved order not yet delivered in full
+      properties:
+        purchaseOrderId: { type: string }
+        purchaseOrderNumber: { type: string }
+        supplierId: { type: string }
+        supplierName: { type: string }
+        paymentTerms: { type: string }
+        totalCents: { type: integer }
+        receivedCents: { type: integer }
+        outstandingCents: { type: integer }
+        approvedAt: { type: string }
+        createdAt: { type: string, description: When Financials first heard of the order }
+
+    RecordPayment:
+      type: object
+      required: [amountCents]
+      properties:
+        amountCents:
+          type: integer
+          minimum: 1
+          description: Not more than is still owed; part-payments are allowed
+        reference:
+          type: string
+          maxLength: 100
+          description: The bank's or the cheque's reference
+        paidAt:
+          type: string
+          format: date-time
+          description: Defaults to now; must not be in the future
+
+    Account:
+      type: object
+      properties:
+        code: { type: string, example: '1200' }
+        name: { type: string, example: Inventory }
+        type: { type: string, enum: [ASSET, LIABILITY, REVENUE, EXPENSE] }
+        debitCents: { type: integer }
+        creditCents: { type: integer }
+        balanceCents:
+          type: integer
+          description: |
+            On the side the account normally sits: debits less credits for assets and
+            expenses, credits less debits for liabilities and revenue
+
+    JournalLine:
+      type: object
+      description: A debit or a credit to one account; exactly one of the two is non-zero
+      properties:
+        id: { type: string, format: uuid }
+        journalEntryId: { type: string, format: uuid }
+        accountCode: { type: string }
+        accountName: { type: string }
+        debitCents: { type: integer }
+        creditCents: { type: integer }
+        occurredAt: { type: string, description: Copied from the entry }
+
+    JournalEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        source:
+          type: string
+          enum: [GOODS_RECEIVED, SALE, SALE_COST, DAY_CLOSED, SUPPLIER_PAYMENT]
+          description: What caused the entry
+        reference:
+          type: string
+          description: A goods received note number, a sale number, or a register and date
+        description: { type: string }
+        storeCode: { type: [string, 'null'] }
+        occurredAt:
+          type: string
+          description: When it happened in the business, not when it was booked
+        createdAt: { type: string, description: When it was booked }
+        lines:
+          type: array
+          items: { $ref: '#/components/schemas/JournalLine' }
+
+  responses:
+    BadPeriod:
+      description: A date is not a real date, or `from` is after `to`
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: No record with this id
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Is the service up?
+      responses:
+        '200':
+          description: Service status and whether the module's feature flag is on
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  service: { type: string }
+                  enabled: { type: boolean }
+
+  /reports/profit-and-loss:
+    get:
+      tags: [Reports]
+      summary: Are we making money?
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Profit and loss for the period
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ProfitAndLoss' }
+        '400': { $ref: '#/components/responses/BadPeriod' }
+
+  /reports/balance-sheet:
+    get:
+      tags: [Reports]
+      summary: What do we own and what do we owe?
+      parameters:
+        - $ref: '#/components/parameters/AsOf'
+      responses:
+        '200':
+          description: The balance sheet at the end of the day
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/BalanceSheet' }
+        '400': { $ref: '#/components/responses/BadPeriod' }
+
+  /reports/profitability:
+    get:
+      tags: [Reports]
+      summary: Profit by product or by store
+      description: Most profitable first.
+      parameters:
+        - name: by
+          in: query
+          schema: { type: string, enum: [product, store], default: product }
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Profit for each product or store in the period
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      from: { type: string, format: date }
+                      to: { type: string, format: date }
+                      by: { type: string, enum: [product, store] }
+                      rows:
+                        type: array
+                        items: { $ref: '#/components/schemas/ProfitRow' }
+                      uncostedSales: { type: integer }
+        '400': { $ref: '#/components/responses/BadPeriod' }
+
+  /bills:
+    get:
+      tags: [Supplier bills]
+      summary: Bills from suppliers
+      description: Soonest due first.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [OPEN, PAID, ALL], default: OPEN }
+      responses:
+        '200':
+          description: Bills, each with what is still owed and how late it is
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Bill' }
+        '400':
+          description: Unknown status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /bills/suppliers:
+    get:
+      tags: [Supplier bills]
+      summary: What each supplier is owed, by how late it is
+      description: Aged payables. Largest balance first; open bills only.
+      responses:
+        '200':
+          description: Supplier balances and their totals
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      suppliers:
+                        type: array
+                        items: { $ref: '#/components/schemas/SupplierBalance' }
+                      totals:
+                        type: object
+                        properties:
+                          outstandingCents: { type: integer }
+                          overdueCents: { type: integer }
+                          buckets: { $ref: '#/components/schemas/AgeBuckets' }
+
+  /bills/{id}:
+    get:
+      tags: [Supplier bills]
+      summary: One bill with the payments made towards it
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: The bill
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Bill' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /bills/{id}/payments:
+    post:
+      tags: [Supplier bills]
+      summary: Record a payment to a supplier
+      description: |
+        Books Dr Accounts payable, Cr Bank. The bill becomes PAID once nothing is owed.
+        This is the only way a person adds to the ledger.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/UserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecordPayment' }
+            example: { amountCents: 100000, reference: BANK-TRF-0091 }
+      responses:
+        '201':
+          description: Payment recorded; the bill as it now stands
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/Bill' }
+        '400':
+          description: |
+            Invalid amount, more than is still owed, a payment dated in the future, or
+            missing `x-user-id`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: The caller is not finance
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: |
+            The bill is already paid, its supplier is not known yet, or someone else paid
+            towards it at the same moment (reload and try again)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /commitments:
+    get:
+      tags: [Supplier bills]
+      summary: Approved orders not yet delivered in full
+      description: Money promised, not yet owed. Newest order first.
+      responses:
+        '200':
+          description: Open commitments and their total
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      commitments:
+                        type: array
+                        items: { $ref: '#/components/schemas/Commitment' }
+                      totalOutstandingCents: { type: integer }
+
+  /ledger/accounts:
+    get:
+      tags: [Ledger]
+      summary: Every account with its balance
+      description: |
+        The trial balance. `balanced` is true when total debits equal total credits,
+        which they always should.
+      parameters:
+        - $ref: '#/components/parameters/AsOf'
+      responses:
+        '200':
+          description: Account balances
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      asOf: { type: string, format: date }
+                      accounts:
+                        type: array
+                        items: { $ref: '#/components/schemas/Account' }
+                      totalDebitCents: { type: integer }
+                      totalCreditCents: { type: integer }
+                      balanced: { type: boolean }
+        '400': { $ref: '#/components/responses/BadPeriod' }
+
+  /ledger/entries:
+    get:
+      tags: [Ledger]
+      summary: Journal entries, newest first
+      parameters:
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [GOODS_RECEIVED, SALE, SALE_COST, DAY_CLOSED, SUPPLIER_PAYMENT]
+        - name: reference
+          in: query
+          description: Matches part of the reference, ignoring case
+          schema: { type: string, example: GRN-000003 }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        '200':
+          description: A page of journal entries with their lines
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/JournalEntry' }
+                  meta:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      limit: { type: integer }
+                      total: { type: integer }
+                      totalPages: { type: integer }
+        '400':
+          description: Unknown source, or a page or limit out of range
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /ledger/entries/{id}:
+    get:
+      tags: [Ledger]
+      summary: One journal entry with its lines
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: The journal entry
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/JournalEntry' }
+        '404': { $ref: '#/components/responses/NotFound' }

@@ -1,0 +1,257 @@
+openapi: 3.1.0
+info:
+  title: Sales Audit Service
+  version: 1.0.0
+  description: |
+    Does the money in each register match what Point of Sale says it should hold?
+
+    A **register day** is one register's trading day. It is not created through this API:
+    it builds up from `ItemSold` events (see `contracts/events/item-sold.md`), with cash
+    counted net of change given. A day runs midnight to midnight UTC, the same boundary
+    Point of Sale uses.
+
+    Closing a day publishes `DayClosed`; see `contracts/events/day-closed.md`.
+
+    Money is always **integer cents**. Differences are **counted minus expected**: negative
+    is short, positive is over.
+
+    There is no auth service yet: the caller identifies itself with `x-user-id` and
+    `x-user-role` headers.
+servers:
+  - url: http://localhost:3006/sales-audit-api
+    description: Local development
+
+tags:
+  - name: Register days
+  - name: Health
+
+components:
+  parameters:
+    UserId:
+      name: x-user-id
+      in: header
+      required: true
+      schema: { type: string }
+      description: Who is making the request (stands in for authentication)
+    UserRole:
+      name: x-user-role
+      in: header
+      required: false
+      schema: { type: string, default: MANAGER }
+      description: Only a MANAGER can close a register's day
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message: { type: string }
+            details:
+              type: object
+              description: Field name to messages
+              additionalProperties:
+                type: array
+                items: { type: string }
+
+    RecordedSale:
+      type: object
+      description: A sale counted towards the day, so the figures can be traced back
+      properties:
+        id: { type: string, format: uuid }
+        registerDayId: { type: string, format: uuid }
+        saleNumber: { type: string }
+        cashierId: { type: string }
+        totalCents: { type: integer }
+        cashCents: { type: integer }
+        cardCents: { type: integer }
+        soldAt: { type: string }
+
+    RegisterDay:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        storeCode: { type: string }
+        registerCode: { type: string, example: REG-2 }
+        businessDate: { type: string, format: date }
+        status: { type: string, enum: [OPEN, CLOSED] }
+        salesCount: { type: integer }
+        expectedCashCents:
+          type: integer
+          description: Cash taken, less change given
+        expectedCardCents: { type: integer }
+        expectedTotalCents: { type: integer }
+        countedCashCents: { type: [integer, 'null'], description: Null until closed }
+        countedCardCents: { type: [integer, 'null'] }
+        cashDifferenceCents: { type: [integer, 'null'] }
+        cardDifferenceCents: { type: [integer, 'null'] }
+        differenceCents:
+          type: [integer, 'null']
+          description: Cash and card differences added together
+        explanation: { type: [string, 'null'] }
+        closedBy: { type: [string, 'null'] }
+        closedAt: { type: [string, 'null'] }
+        checkedWithPos:
+          type: [boolean, 'null']
+          description: |
+            False when Point of Sale could not be reached at close, so the figures were
+            not cross-checked
+        salesAfterClose:
+          type: integer
+          description: |
+            Sales that arrived after the day was closed. They are not added to the
+            signed-off figures; above zero means the close needs a second look.
+        createdAt: { type: string }
+        updatedAt: { type: string }
+        sales:
+          type: array
+          description: Only on the single-day response
+          items: { $ref: '#/components/schemas/RecordedSale' }
+
+    CloseRegisterDay:
+      type: object
+      required: [countedCashCents, countedCardCents]
+      properties:
+        countedCashCents:
+          type: integer
+          minimum: 0
+          description: Cash counted in the drawer
+        countedCardCents:
+          type: integer
+          minimum: 0
+          description: Total of the card slips
+        explanation:
+          type: string
+          maxLength: 1000
+          description: Required, at least 10 characters, when either count does not match
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Is the service up?
+      responses:
+        '200':
+          description: Service status and whether the module's feature flag is on
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  service: { type: string }
+                  enabled: { type: boolean }
+
+  /register-days:
+    get:
+      tags: [Register days]
+      summary: Days waiting to be closed, or the discrepancy log
+      parameters:
+        - name: status
+          in: query
+          description: |
+            OPEN (the default) lists days still to close, oldest first. CLOSED lists the
+            50 most recently closed, which is the discrepancy log.
+          schema: { type: string, enum: [OPEN, CLOSED], default: OPEN }
+      responses:
+        '200':
+          description: Register days
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/RegisterDay' }
+        '400':
+          description: Unknown status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /register-days/{id}:
+    get:
+      tags: [Register days]
+      summary: One day with the sales counted towards it
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: The register day
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/RegisterDay' }
+        '404':
+          description: No register day with this id
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /register-days/{id}/close:
+    post:
+      tags: [Register days]
+      summary: Sign off a register's day against the count
+      description: |
+        Cash and card slips are compared separately: a cash surplus that cancels a card
+        shortfall still needs explaining, because the money is in the wrong place.
+
+        Before closing, Point of Sale is asked what it recorded for the register that
+        day. If it has more sales than have arrived here, the close waits. If it cannot
+        be reached, the day closes on the figures held and `checkedWithPos` is false.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/UserRole'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CloseRegisterDay' }
+            example:
+              countedCashCents: 119500
+              countedCardCents: 0
+              explanation: A KES 5 coin rolled under the counter
+      responses:
+        '200':
+          description: Register day closed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/RegisterDay' }
+        '400':
+          description: |
+            Invalid count, missing `x-user-id`, or the count does not match and no
+            explanation of at least 10 characters was given
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: The caller is not a manager
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: No register day with this id
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: |
+            The day is already closed, or Point of Sale has sales for it that have not
+            arrived here yet (wait a moment and try again)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }

@@ -1,4 +1,5 @@
 import { GOODS_RECEIVED, type GoodsReceivedPayload } from "../events/event-types";
+import { newOutboxEvent } from "../events/outbox.repository";
 import { db } from "../prisma/db";
 import type { Discrepancy } from "./discrepancy";
 
@@ -121,11 +122,9 @@ const insert = async (note: NewGoodsReceivedNote) =>
         })),
       };
 
-      await tx.orm.public.OutboxEvent.create({
-        eventType: GOODS_RECEIVED,
-        aggregateId: note.goodsReceivedNoteNumber,
-        payload: JSON.stringify(payload),
-      });
+      await tx.orm.public.OutboxEvent.create(
+        newOutboxEvent(GOODS_RECEIVED, note.goodsReceivedNoteNumber, payload),
+      );
     }
 
     return created;
