@@ -1,0 +1,14 @@
+# Images are built from the repository root (docker build -f service-x/Dockerfile .),
+# so this file applies to every service.
+**/node_modules
+**/dist
+**/.env
+**/tests
+**/.claude
+**/.agents
+.git
+.github
+*-app
+*-portal
+*-dashboard
+*-center
