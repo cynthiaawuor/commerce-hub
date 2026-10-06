@@ -1,0 +1,219 @@
+# Production: one VPS, everything in containers, only Caddy (80/443) reachable.
+#   docker compose -f compose.prod.yml --env-file .env.prod up -d --build
+name: commerce-hub-prod
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+x-service: &service
+  restart: unless-stopped
+  logging: *logging
+  networks: [backend]
+
+x-migrate: &migrate
+  restart: "no"
+  logging: *logging
+  networks: [backend]
+  depends_on:
+    postgres: { condition: service_healthy }
+
+x-needs-broker: &needs-broker
+  rabbitmq: { condition: service_healthy }
+
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      VENDOR_DB_PASSWORD: ${VENDOR_DB_PASSWORD}
+      PROCUREMENT_DB_PASSWORD: ${PROCUREMENT_DB_PASSWORD}
+      INVENTORY_DB_PASSWORD: ${INVENTORY_DB_PASSWORD}
+      RECEIVING_DB_PASSWORD: ${RECEIVING_DB_PASSWORD}
+      WAREHOUSE_DB_PASSWORD: ${WAREHOUSE_DB_PASSWORD}
+      POS_DB_PASSWORD: ${POS_DB_PASSWORD}
+      SALES_AUDIT_DB_PASSWORD: ${SALES_AUDIT_DB_PASSWORD}
+      FINANCIALS_DB_PASSWORD: ${FINANCIALS_DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./deploy/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+
+  rabbitmq:
+    image: rabbitmq:4
+    # RabbitMQ keeps its data under the node's hostname, so it must not change
+    hostname: rabbitmq
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      # As the rabbitmq user, as in development
+      test: ["CMD-SHELL", "gosu rabbitmq rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+
+  vendor-migrate:
+    <<: *migrate
+    build: { context: ., dockerfile: service-vendor/Dockerfile, target: migrate }
+    environment:
+      DATABASE_URL: postgresql://vendor:${VENDOR_DB_PASSWORD}@postgres:5432/service-vendor
+  vendor:
+    <<: *service
+    build: { context: ., dockerfile: service-vendor/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://vendor:${VENDOR_DB_PASSWORD}@postgres:5432/service-vendor
+    depends_on:
+      vendor-migrate: { condition: service_completed_successfully }
+
+  procurement-migrate:
+    <<: *migrate
+    build: { context: ., dockerfile: service-procurement/Dockerfile, target: migrate }
+    environment:
+      DATABASE_URL: postgresql://procurement:${PROCUREMENT_DB_PASSWORD}@postgres:5432/service-procurement
+  procurement:
+    <<: *service
+    build: { context: ., dockerfile: service-procurement/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://procurement:${PROCUREMENT_DB_PASSWORD}@postgres:5432/service-procurement
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      VENDOR_API_URL: http://vendor:3000/vendor-api
+    depends_on:
+      <<: *needs-broker
+      procurement-migrate: { condition: service_completed_successfully }
+
+  inventory-migrate:
+    <<: *migrate
+    build: { context: ., dockerfile: service-inventory/Dockerfile, target: migrate }
+    environment:
+      DATABASE_URL: postgresql://inventory:${INVENTORY_DB_PASSWORD}@postgres:5432/service-inventory
+  inventory:
+    <<: *service
+    build: { context: ., dockerfile: service-inventory/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://inventory:${INVENTORY_DB_PASSWORD}@postgres:5432/service-inventory
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+    depends_on:
+      <<: *needs-broker
+      inventory-migrate: { condition: service_completed_successfully }
+
+  receiving-migrate:
+    <<: *migrate
+    build: { context: ., dockerfile: service-receiving/Dockerfile, target: migrate }
+    environment:
+      DATABASE_URL: postgresql://receiving:${RECEIVING_DB_PASSWORD}@postgres:5432/service-receiving
+  receiving:
+    <<: *service
+    build: { context: ., dockerfile: service-receiving/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://receiving:${RECEIVING_DB_PASSWORD}@postgres:5432/service-receiving
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+    depends_on:
+      <<: *needs-broker
+      receiving-migrate: { condition: service_completed_successfully }
+
+  warehouse-migrate:
+    <<: *migrate
+    build: { context: ., dockerfile: service-warehouse/Dockerfile, target: migrate }
+    environment:
+      DATABASE_URL: postgresql://warehouse:${WAREHOUSE_DB_PASSWORD}@postgres:5432/service-warehouse
+  warehouse:
+    <<: *service
+    build: { context: ., dockerfile: service-warehouse/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://warehouse:${WAREHOUSE_DB_PASSWORD}@postgres:5432/service-warehouse
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+    depends_on:
+      <<: *needs-broker
+      warehouse-migrate: { condition: service_completed_successfully }
+
+  pos-migrate:
+    <<: *migrate
+    build: { context: ., dockerfile: service-pos/Dockerfile, target: migrate }
+    environment:
+      DATABASE_URL: postgresql://pos:${POS_DB_PASSWORD}@postgres:5432/service-pos
+  pos:
+    <<: *service
+    build: { context: ., dockerfile: service-pos/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://pos:${POS_DB_PASSWORD}@postgres:5432/service-pos
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      INVENTORY_API_URL: http://inventory:3002/inventory-api
+    depends_on:
+      <<: *needs-broker
+      pos-migrate: { condition: service_completed_successfully }
+
+  sales-audit-migrate:
+    <<: *migrate
+    build: { context: ., dockerfile: service-sales-audit/Dockerfile, target: migrate }
+    environment:
+      DATABASE_URL: postgresql://sales_audit:${SALES_AUDIT_DB_PASSWORD}@postgres:5432/service-sales-audit
+  sales-audit:
+    <<: *service
+    build: { context: ., dockerfile: service-sales-audit/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://sales_audit:${SALES_AUDIT_DB_PASSWORD}@postgres:5432/service-sales-audit
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      POS_API_URL: http://pos:3005/pos-api
+    depends_on:
+      <<: *needs-broker
+      sales-audit-migrate: { condition: service_completed_successfully }
+
+  financials-migrate:
+    <<: *migrate
+    build: { context: ., dockerfile: service-financials/Dockerfile, target: migrate }
+    environment:
+      DATABASE_URL: postgresql://financials:${FINANCIALS_DB_PASSWORD}@postgres:5432/service-financials
+  financials:
+    <<: *service
+    build: { context: ., dockerfile: service-financials/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://financials:${FINANCIALS_DB_PASSWORD}@postgres:5432/service-financials
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      INVENTORY_API_URL: http://inventory:3002/inventory-api
+    depends_on:
+      <<: *needs-broker
+      financials-migrate: { condition: service_completed_successfully }
+
+  web:
+    build: { context: ., dockerfile: deploy/web.Dockerfile }
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH}
+    volumes:
+      # Certificates live here; losing them means asking Let's Encrypt again
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [vendor, procurement, inventory, receiving, warehouse, pos, sales-audit, financials]
+    networks: [edge, backend]
+
+networks:
+  # No route to the internet, and nothing outside can reach in except through Caddy
+  backend: { internal: true }
+  edge: {}
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  caddy-data:
+  caddy-config:

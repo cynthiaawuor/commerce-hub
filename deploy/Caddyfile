@@ -1,0 +1,90 @@
+# One subdomain per app, on the domain in $DOMAIN. Caddy gets and renews an HTTPS
+# certificate for each by itself. With DOMAIN=localhost it uses local certificates.
+
+# The services have no login yet and believe whatever x-user-id they are sent,
+# so everything sits behind one shared password until real auth exists.
+(protected) {
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+}
+
+# Every app calls its APIs on its own origin (/vendor-api, /pos-api, ...), exactly as
+# the Vite proxy does in development, so the apps need no production settings.
+(apis) {
+	handle /vendor-api/* {
+		reverse_proxy vendor:3000
+	}
+	handle /procurement-api/* {
+		reverse_proxy procurement:3001
+	}
+	handle /inventory-api/* {
+		reverse_proxy inventory:3002
+	}
+	handle /receiving-api/* {
+		reverse_proxy receiving:3003
+	}
+	handle /warehouse-api/* {
+		reverse_proxy warehouse:3004
+	}
+	handle /pos-api/* {
+		reverse_proxy pos:3005
+	}
+	handle /sales-audit-api/* {
+		reverse_proxy sales-audit:3006
+	}
+	handle /financials-api/* {
+		reverse_proxy financials:3007
+	}
+}
+
+# A built app from /srv/<name>. Unknown paths fall back to index.html,
+# so the apps' own routes survive a page reload.
+(app) {
+	import protected
+	encode zstd gzip
+	import apis
+	handle {
+		root * /srv/{args[0]}
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+{$DOMAIN} {
+	import protected
+	root * /srv/landing
+	file_server
+}
+
+vendor.{$DOMAIN} {
+	import app vendor-portal
+}
+
+procurement.{$DOMAIN} {
+	import app procurement-dashboard
+}
+
+inventory.{$DOMAIN} {
+	import app inventory-control-center
+}
+
+receiving.{$DOMAIN} {
+	import app receiving-app
+}
+
+warehouse.{$DOMAIN} {
+	import app warehouse-floor-app
+}
+
+pos.{$DOMAIN} {
+	import app pos-till-app
+}
+
+audit.{$DOMAIN} {
+	import app sales-audit-app
+}
+
+finance.{$DOMAIN} {
+	import app financials-app
+}
