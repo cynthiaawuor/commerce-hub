@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Commerce Hub</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+      main {
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: 3rem 1rem;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        display: grid;
+        gap: 0.75rem;
+      }
+      a {
+        display: block;
+        padding: 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        background: #fff;
+        color: inherit;
+        text-decoration: none;
+      }
+      span {
+        display: block;
+        font-size: 0.875rem;
+        color: #64748b;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Commerce Hub</h1>
+      <ul id="apps"></ul>
+    </main>
+    <script>
+      // Built from this page's own host, so the links work on any domain
+      const apps = [
+        ["vendor", "Vendor Portal", "Suppliers and what they sell"],
+        [
+          "procurement",
+          "Procurement Dashboard",
+          "Purchase orders and approvals",
+        ],
+        [
+          "inventory",
+          "Inventory Control Center",
+          "Stock, adjustments and valuation",
+        ],
+        ["receiving", "Receiving", "Check deliveries in at the dock"],
+        ["warehouse", "Warehouse Management", "Put received goods on shelves"],
+        ["pos", "Point of Sale", "The till"],
+        ["audit", "Sales Audit", "Count the registers and close the day"],
+        ["finance", "Financials", "What we own, owe and earn"],
+      ];
+      const list = document.getElementById("apps");
+
+      for (const [sub, name, about] of apps) {
+        const link = document.createElement("a");
+        link.href = `${location.protocol}//${sub}.${location.host}/`;
+
+        const title = document.createElement("strong");
+        title.textContent = name;
+        const description = document.createElement("span");
+        description.textContent = about;
+        link.append(title, description);
+
+        const item = document.createElement("li");
+        item.append(link);
+        list.append(item);
+      }
+    </script>
+  </body>
+</html>
